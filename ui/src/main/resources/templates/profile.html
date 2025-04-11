@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <title>Profile - DevSpace</title>
+</head>
+<body>
+    <div th:fragment="content">
+        <div class="row">
+            <!-- Profile Sidebar -->
+            <div class="col-lg-3 mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3" id="profileAvatar" style="width: 100px; height: 100px; border-radius: 50%; background-color: #4a6cf7; color: white; font-size: 2.5rem; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                            <span id="profileInitials">U</span>
+                        </div>
+                        <h5 class="mb-1" id="profileUsername">Username</h5>
+                        <p class="text-muted mb-3" id="profileRole">User</p>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" type="button">Edit Profile</button>
+                        </div>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a href="#profile" class="list-group-item list-group-item-action active" data-bs-toggle="list">
+                            <i class="fas fa-user me-2"></i> Profile
+                        </a>
+                        <a href="#security" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                            <i class="fas fa-lock me-2"></i> Security
+                        </a>
+                        <a href="#projects" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                            <i class="fas fa-code me-2"></i> Projects
+                        </a>
+                        <a href="#settings" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                            <i class="fas fa-cog me-2"></i> Settings
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Profile Content -->
+            <div class="col-lg-9">
+                <div class="tab-content">
+                    <!-- Profile Tab -->
+                    <div class="tab-pane fade show active" id="profile">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">Profile Information</h5>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <p class="text-muted mb-1">Username</p>
+                                        <p class="mb-0" id="infoUsername">Username</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <p class="text-muted mb-1">Email</p>
+                                        <p class="mb-0">user@example.com</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <p class="text-muted mb-1">Member Since</p>
+                                        <p class="mb-0">January 1, 2023</p>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <p class="text-muted mb-1">Bio</p>
+                                        <p class="mb-0">No bio information provided.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card border-0 shadow-sm mt-4">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">Activity</h5>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center justify-content-center py-5">
+                                    <div class="text-center">
+                                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                                        <p class="mb-0">No recent activity to display.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Other Tabs (Security) -->
+                    <div class="tab-pane fade" id="security">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">Security Settings</h5>
+                            </div>
+                            <div class="card-body p-4">
+                                <h6 class="mb-3">Change Password</h6>
+                                <form>
+                                    <div class="mb-3">
+                                        <label for="currentPassword" class="form-label">Current Password</label>
+                                        <input type="password" class="form-control" id="currentPassword">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="newPassword" class="form-label">New Password</label>
+                                        <input type="password" class="form-control" id="newPassword">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                        <input type="password" class="form-control" id="confirmPassword">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Update Password</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Projects Tab -->
+                    <div class="tab-pane fade" id="projects">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">My Projects</h5>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center justify-content-center py-5">
+                                    <div class="text-center">
+                                        <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                                        <p class="mb-2">No projects created yet.</p>
+                                        <a href="#" class="btn btn-primary">Create New Project</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Settings Tab -->
+                    <div class="tab-pane fade" id="settings">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">Account Settings</h5>
+                            </div>
+                            <div class="card-body p-4">
+                                <h6 class="mb-3">Preferences</h6>
+                                <form>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="emailNotifications" checked>
+                                        <label class="form-check-label" for="emailNotifications">Email Notifications</label>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="darkMode">
+                                        <label class="form-check-label" for="darkMode">Dark Mode</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Custom scripts -->
+    <th:block th:fragment="scripts">
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // This page requires authentication
+                if (!window.AuthUtils || !AuthUtils.isAuthenticated()) {
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                const userInfo = AuthUtils.getUserInfo();
+                if (userInfo && userInfo.username) {
+                    // Set username in profile
+                    document.getElementById('profileUsername').textContent = userInfo.username;
+                    document.getElementById('infoUsername').textContent = userInfo.username;
+                    
+                    // Set user role
+                    const roleText = userInfo.isAdmin ? 'Administrator' : 'User';
+                    document.getElementById('profileRole').textContent = roleText;
+                    
+                    // Set profile initials
+                    const initials = userInfo.username.charAt(0).toUpperCase();
+                    document.getElementById('profileInitials').textContent = initials;
+                }
+                
+                // Handle URL hash for tab switching
+                const hash = window.location.hash;
+                if (hash) {
+                    const tabLink = document.querySelector(`a[href="${hash}"]`);
+                    if (tabLink) {
+                        tabLink.click();
+                    }
+                }
+            });
+        </script>
+    </th:block>
+</body>
+</html> 

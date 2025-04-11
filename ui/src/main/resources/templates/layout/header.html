@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="headerFragment">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title ?: 'DevSpace'}">DevSpace</title>
+    <!-- Bootstrap CSS -->
+    <link th:href="@{https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css}" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link th:href="@{https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css}" rel="stylesheet">
+    <!-- Main CSS -->
+    <link th:href="@{/css/main.css}" rel="stylesheet">
+    <!-- Custom styles -->
+    <style>
+        :root {
+            --primary-color: #4a6cf7;
+            --primary-hover: #3a5ce5;
+            --dark-color: #212529;
+            --light-color: #f8f9fa;
+        }
+        
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar-brand i {
+            margin-right: 8px;
+            font-size: 1.5rem;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 2rem 0;
+        }
+        
+        .navbar .nav-link {
+            position: relative;
+            margin: 0 0.5rem;
+        }
+        
+        .navbar .nav-link:after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 0;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+        
+        .navbar .nav-link:hover:after,
+        .navbar .nav-link.active:after {
+            width: 100%;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            margin-right: 8px;
+        }
+    </style>
+    <!-- Auth JS Utility -->
+    <script th:src="@{/js/auth.js}"></script>
+    <!-- Header JS for UI interactions -->
+    <script th:src="@{/js/header.js}"></script>
+</head>
+<body>
+    <header th:fragment="navbar">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container">
+                <a class="navbar-brand" th:href="@{/}">
+                    <i class="fas fa-code"></i>DevSpace
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" 
+                        aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link" th:classappend="${currentPage == 'home' ? 'active' : ''}" th:href="@{/}">首页</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:classappend="${currentPage == 'backend' ? 'active' : ''}" th:href="@{/category/backend}">后端</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:classappend="${currentPage == 'frontend' ? 'active' : ''}" th:href="@{/category/frontend}">前端</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:classappend="${currentPage == 'database' ? 'active' : ''}" th:href="@{/category/database}">数据库</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:classappend="${currentPage == 'tools' ? 'active' : ''}" th:href="@{/category/tools}">工具</a>
+                        </li>
+                    </ul>
+                    
+                    <!-- 搜索框 -->
+                    <form class="d-flex me-2">
+                        <div class="input-group">
+                            <input class="form-control" type="search" placeholder="搜索文章..." aria-label="Search">
+                            <button class="btn btn-outline-primary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- User Menu (shown when authenticated) -->
+                    <div class="d-flex align-items-center user-menu force-hide" id="userMenu">
+                        <div class="user-avatar" id="userInitials"></div>
+                        <div class="dropdown">
+                            <button class="btn dropdown-toggle" type="button" id="userMenuButton" 
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="username">User</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                                <li><a class="dropdown-item" th:href="@{/article/publish}"><i class="fas fa-edit me-2"></i>发布文章</a></li>
+                                <li><a class="dropdown-item" th:href="@{/my/articles}"><i class="fas fa-list me-2"></i>我的文章</a></li>
+                                <li><a class="dropdown-item" th:href="@{/my/favorites}"><i class="fas fa-star me-2"></i>我的收藏</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" id="logoutButton"><i class="fas fa-sign-out-alt me-2"></i>退出登录</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Login/Register buttons (shown when not authenticated) -->
+                    <div class="d-flex gap-2 auth-buttons force-show" id="authButtons">
+                        <a th:href="@{/login}" class="btn btn-outline-primary">登录</a>
+                        <a th:href="@{/register}" class="btn btn-primary">注册</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+</body>
+</html> 

@@ -1,4 +1,4 @@
-package org.jeffery.home;
+package org.jeffrey.web.home;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -35,8 +35,19 @@ public class HomeController {
         }
     }
 
+    /**
+     * Renders the home page.
+     *
+     * @param model The Spring UI Model.
+     * @return The name of the home view template.
+     */
     @GetMapping("/")
     public String index(Model model) {
+        // Set page attributes for the new layout
+        model.addAttribute("title", "DevSpace - Home");
+        model.addAttribute("currentPage", "home");
+        model.addAttribute("viewName", "index");
+        
         // Add static article data for the new layout
         List<Article> topArticles = Arrays.asList(
                 new Article("Spring Boot Microservices", "Michael Lee", "Building scalable microservices with Spring Boot and Spring Cloud."),
@@ -56,6 +67,30 @@ public class HomeController {
         );
         model.addAttribute("topArticles", topArticles); // For the top card grid
         model.addAttribute("recentArticles", recentArticles); // For the main list
-        return "index"; // This will look for index.html in templates folder
+        return "layout/main"; // 使用主布局作为视图
+    }
+
+    /**
+     * Redirects to the home page.
+     *
+     * @return Redirect to the home page.
+     */
+    @GetMapping("/home")
+    public String redirectToHome() {
+        return "redirect:/";
+    }
+
+    /**
+     * Renders the about page.
+     *
+     * @param model The Spring UI Model.
+     * @return The name of the about view template.
+     */
+    @GetMapping("/about")
+    public String aboutPage(Model model) {
+        model.addAttribute("title", "DevSpace - About");
+        model.addAttribute("currentPage", "about");
+        model.addAttribute("viewName", "about");
+        return "layout/main";
     }
 } 

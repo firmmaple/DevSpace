@@ -1,9 +1,41 @@
 server:
   port: 8088
 
+# 默认的数据库名
+database:
+  name: dev_space
+
 spring:
+  config:
+    import: application-dal.yml
+
   devtools:
     restart:
       enabled: true
     livereload:
       enabled: true
+
+
+knife4j:
+  enable: true
+  setting:
+    language: zh-CN
+  openapi:
+    title: DevSpace
+    description: 一个基于Spring Boot的社区系统
+    version: 1.0.0
+    concat:
+      - Jeffery Shao
+      - https://github.com/firmmaple
+    email: afeng@connect.hku.hk
+#    group:
+#      admin:
+#        group-name: 后台接口分组
+#        api-rule: package
+#        api-rule-resources:
+#          - com.github.paicoding.forum.web.admin
+#      front:
+#        group-name: 前台接口分组
+#        api-rule: package
+#        api-rule-resources:
+#          - com.github.paicoding.forum.web.front
