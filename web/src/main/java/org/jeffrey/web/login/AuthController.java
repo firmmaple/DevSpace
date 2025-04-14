@@ -6,6 +6,7 @@ import org.jeffrey.api.vo.StatusEnum;
 import org.jeffrey.core.security.CustomUserDetails;
 import org.jeffrey.core.security.JWTUtil;
 import org.jeffrey.core.security.UserInfo;
+import org.jeffrey.core.trace.TraceLog;
 import org.jeffrey.service.user.service.UserService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -72,6 +73,7 @@ public class AuthController {
 
     @PostMapping("/auth/login")
     @ResponseBody
+    @TraceLog("用户登录")
     public ResVo<Map<String, Object>> authenticateUser(@RequestParam String username, @RequestParam String password) {
         // 构造认证token
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
@@ -106,6 +108,7 @@ public class AuthController {
      */
     @PostMapping("/auth/register")
     @ResponseBody
+    @TraceLog("用户注册")
     public ResVo<String> registerUser(@RequestParam String username, @RequestParam String password) {
         // Validate username and password
         if (username == null || username.trim().isEmpty() || !username.matches("^[a-zA-Z0-9_]{3,20}$")) {

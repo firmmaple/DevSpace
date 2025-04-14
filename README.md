@@ -27,7 +27,7 @@ DevSpace
 - Redis(计划使用，用于存储在线用户以及计数统计)
 - RabbitMQ(计划使用，用于评论、点赞、收藏等异步处理)
 - HandlerExceptionResolver(计划使用，用于全局异常处理)
-- AOP + TraceID(计划使用，用于日志记录，实现任务追踪)
+- AOP + TraceID(已实现，用于日志记录，实现任务追踪、监控和诊断)
 
 ## 项目结构
 
@@ -205,54 +205,191 @@ public String index(Model model) {
 
 # 前后端数据传输
 
-使用 ResVo 进行前后端数据传输，ResVo 是一个通用的响应对象，包含了状态码、消息和数据等字段。它可以用于统一处理 API 的响应格式。
+DevSpace采用统一的数据传输模型，确保API响应格式一致性和可预测性，便于前端处理各种请求结果。
+
+## 核心组件
+
+### ResVo - 统一响应对象
+
+`ResVo<T>`是系统核心的响应封装类，泛型设计允许封装任意类型的业务数据。
 
 ```java
-public class ResVo<T> {
-    public class ResVo<T> implements Serializable {
-        private Status status;
-
-        private T result;
-    }
+public class ResVo<T> implements Serializable {
+    // 状态信息，包含状态码和消息
+    private Status status;
+    
+    // 业务数据，可以是任何类型
+    private T result;
+    
+    // 便捷的静态构造方法
+    public static <T> ResVo<T> ok(T result) {...}
+    public static ResVo<String> ok() {...}
+    public static <T> ResVo<T> fail(StatusEnum status, Object... args) {...}
+    public static <T> ResVo<T> fail(Status status) {...}
 }
 ```
 
-Status 类用于表示响应的状态码和消息。
+### Status - 状态描述
+
+`Status`类封装了API响应的状态信息，包含状态码和消息文本。
 
 ```java
 public class Status {
-    @Schema(description = "状态码, 0表示成功返回，其他异常返回", required = true, example = "0")
+    // 状态码：0表示成功，其他值表示特定错误
     private int code;
-
-    @Schema(description = "正确返回时为ok，异常时为描述文案", required = true, example = "ok")
+    
+    // 状态消息：成功为"OK"，失败时提供错误描述
     private String msg;
+}
+```
 
-    public static Status newStatus(int code, String msg) {
-        return new Status(code, msg);
+### StatusEnum - 错误码体系
+
+系统定义了规范化的错误码体系，采用三段式设计：`业务-状态-具体错误`
+
+```
+异常码规范：xxx - xxx - xxx
+           业务 - 状态 - code
+
+业务码：
+- 100: 全局通用错误
+- 200: 文章相关错误
+- 300: 评论相关错误
+- 400: 用户相关错误
+
+状态码：(基于HTTP状态码设计)
+- 4xx: 客户端错误(参数错误、权限不足等)
+- 5xx: 服务器错误(内部异常等)
+```
+
+## 使用示例
+
+### 成功响应
+
+```java
+// 返回带数据的成功响应
+User user = userService.getUserById(userId);
+return ResVo.ok(user);
+
+// 返回无数据的成功响应(仅操作状态)
+userService.updatePassword(userId, newPassword);
+return ResVo.ok();
+```
+
+### 错误响应
+
+```java
+// 使用预定义错误类型
+if (user == null) {
+    return ResVo.fail(StatusEnum.USER_NOT_EXISTS, userId);
+}
+
+// 登录失败示例
+if (!passwordEncoder.matches(password, user.getPassword())) {
+    return ResVo.fail(StatusEnum.USER_PWD_ERROR);
+}
+```
+
+### 前端处理
+
+```javascript
+// 发送请求并处理统一响应
+fetch('/api/user/profile')
+  .then(response => response.json())
+  .then(data => {
+    if (data.status.code === 0) {
+      // 处理成功响应
+      renderUserProfile(data.result);
+    } else {
+      // 处理错误
+      showError(data.status.msg);
+    }
+  });
+```
+
+## 错误码示例
+
+| 错误码 | 描述 | 场景 |
+|--------|------|------|
+| 0 | 成功 | 操作成功完成 |
+| 100_400_001 | 参数异常 | 请求参数不符合要求 |
+| 100_403_003 | 未登录 | 未授权访问需要登录的资源 |
+| 200_404_001 | 文章不存在 | 请求不存在的文章资源 |
+| 400_403_002 | 用户名or密码错误 | 登录验证失败 |
+| 400_405_002 | 用户已存在 | 注册时用户名已被占用 |
+
+# AOP+TraceID日志追踪系统
+
+DevSpace实现了基于AOP和TraceID的接口访问日志记录系统，用于请求追踪、监控和诊断。
+
+### 已实现功能
+
+1. **TraceID生成与传递**
+   - 通过过滤器为每个HTTP请求自动生成唯一的TraceID
+   - 支持从请求头中读取已有TraceID，便于跨服务调用追踪
+   - 通过MDC(Mapped Diagnostic Context)将TraceID注入日志系统
+
+2. **AOP切面日志记录**
+   - 基于`@TraceLog`注解标记需要记录日志的方法
+   - 自动记录方法的请求参数、执行时间和返回结果
+   - 记录异常信息，便于问题排查
+
+3. **灵活的日志配置**
+   - 自定义的日志格式，包含TraceID
+   - 支持控制台和文件日志输出
+   - 可配置的日志轮转策略
+
+### 技术实现
+
+1. **核心组件**:
+   - `TraceLog` - 自定义注解，用于标记需要记录日志的方法
+   - `TraceIdFilter` - Servlet过滤器，为每个请求生成和管理TraceID
+   - `TraceLogAspect` - AOP切面，实现方法执行前后的日志记录
+   - `TraceUtil` - 工具类，提供TraceID的生成和获取方法
+
+2. **日志格式**:
+   - 包含时间戳、日志级别、线程信息、类名和TraceID
+   - 示例: `2023-08-01 12:34:56.789 INFO [thread-1] o.j.web.Controller [TraceID: abc123] - 日志内容`
+
+3. **使用方式**:
+   - 在方法或类上添加`@TraceLog`注解即可启用日志记录
+   - 可通过注解参数控制是否记录请求参数和返回结果
+
+### 代码位置
+
+- **核心实现**:
+  - `core/src/main/java/org/jeffrey/core/trace/TraceLog.java` - 注解定义
+  - `core/src/main/java/org/jeffrey/core/trace/TraceIdFilter.java` - 过滤器实现
+  - `core/src/main/java/org/jeffrey/core/trace/TraceLogAspect.java` - AOP切面实现
+  - `core/src/main/java/org/jeffrey/core/trace/TraceUtil.java` - 工具类
+
+- **配置文件**:
+  - `web/src/main/resources/logback.xml` - 日志配置文件
+
+### 使用示例
+
+在Controller层使用:
+```java
+@RestController
+@RequestMapping("/api/users")
+public class UserController {
+    @GetMapping("/{id}")
+    @TraceLog("获取用户信息")
+    public User getUser(@PathVariable Long id) {
+        return userService.getById(id);
     }
 }
 ```
 
-下面为Status code的定义，其中code 0表示成功，其他值表示异常。
-
-```
-异常码规范：
-xxx - xxx - xxx
-业务 - 状态 - code
-  <p>
-  业务取值
-  - 100 全局
-  - 200 文章相关
-  - 300 评论相关
-  - 400 用户相关
-  <p>
-  状态：基于http status的含义
-  - 4xx 调用方使用姿势问题
-  - 5xx 服务内部问题
-  <p>
-  code: 具体的业务code
-  
-示例：
-SUCCESS(0, "OK"),
-ILLEGAL_ARGUMENTS(100_400_001, "参数异常"),
+在Service层使用:
+```java
+@Service
+public class UserServiceImpl implements UserService {
+    @Override
+    @TraceLog(value = "根据ID查询用户", recordResult = true)
+    public User getById(Long id) {
+        // 业务逻辑
+        return userRepository.findById(id).orElse(null);
+    }
+}
 ```

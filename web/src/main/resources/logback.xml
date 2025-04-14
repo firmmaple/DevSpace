@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 定义启动时间戳 -->
+    <timestamp key="startTimestamp" datePattern="yyyyMMdd_HHmmss"/>
+
+    <!-- 控制台日志格式 (带颜色和TraceID) -->
+    <property name="CONSOLE_LOG_PATTERN_WITH_TRACEID"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{15}) [TraceID: %X{traceId}] - %msg%n"/>
+
+    <!-- 文件日志格式 (不带颜色，带TraceID) -->
+    <property name="FILE_LOG_PATTERN_WITH_TRACEID"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{15} [TraceID: %X{traceId}] - %msg%n"/>
+
+    <!-- 控制台日志 Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- 使用带颜色的格式 -->
+            <pattern>${CONSOLE_LOG_PATTERN_WITH_TRACEID}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 按运行次数生成日志文件，并自动清理保留最新的5个文件 -->
+    <appender name="FILE_PER_RUN" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 当前日志文件名 -->
+        <file>logs/app-current.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 历史日志文件名格式 -->
+            <fileNamePattern>logs/app-%d{yyyyMMdd-HHmmss}.log</fileNamePattern>
+            <!-- 仅保留最新的5个日志文件 -->
+            <maxHistory>5</maxHistory>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+            <!-- 每次运行时都触发rollover，确保每次启动都创建新文件 -->
+            <timeBasedFileNamingAndTriggeringPolicy 
+                class="ch.qos.logback.core.rolling.DefaultTimeBasedFileNamingAndTriggeringPolicy">
+                <timeBasedTriggering>true</timeBasedTriggering>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN_WITH_TRACEID}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- (可选) 如果你仍然想要一个按大小/时间滚动的总日志文件 (app.log)，可以保留原来的FILE Appender，并使用无颜色的格式 -->
+    <!--
+    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/app.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/archive/app-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN_WITH_TRACEID}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    -->
+
+    <!-- 根日志级别 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <!-- 将日志同时输出到按次启动的文件 -->
+        <appender-ref ref="FILE_PER_RUN"/>
+        <!-- 如果需要，也可以同时输出到滚动的总日志文件 -->
+        <!-- <appender-ref ref="ROLLING_FILE"/> -->
+    </root>
+</configuration>

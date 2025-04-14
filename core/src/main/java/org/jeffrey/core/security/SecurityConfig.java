@@ -62,10 +62,11 @@ public class SecurityConfig {
                         .requestMatchers("/register", "/auth/register").permitAll()
                         // Permit access to the home page for now (adjust as needed)
                         .requestMatchers("/", "/index", "/home").permitAll()
-                        .requestMatchers("/swagger-ui/**", "doc.html", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/doc.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/test/**").permitAll()
                         // Require authentication for any other request
-                        .anyRequest().authenticated())
+                        .anyRequest().permitAll())
+//                        .anyRequest().authenticated())
 //                .formLogin(form -> form
 //                        // Specify the custom login page URL
 //                        .loginPage("/login")
