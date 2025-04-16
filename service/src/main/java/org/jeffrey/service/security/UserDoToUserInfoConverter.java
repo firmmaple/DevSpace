@@ -1,4 +1,4 @@
-package org.jeffrey.core.security;
+package org.jeffrey.service.security;
 
 import org.jeffrey.service.user.repository.entity.UserDO;
 import org.springframework.core.convert.converter.Converter;

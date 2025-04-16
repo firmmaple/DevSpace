@@ -1,4 +1,4 @@
-package org.jeffrey.core.security;
+package org.jeffrey.service.security;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
