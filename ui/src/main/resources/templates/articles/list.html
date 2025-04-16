@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <title>Articles - DevSpace</title>
+</head>
+<body>
+    <!-- Content fragment to be injected into the main layout -->
+    <div th:fragment="content">
+        <div class="row my-4">
+            <div class="col-md-8">
+                <h1 class="mb-4">DevSpace Articles</h1>
+                
+                <!-- Article Search/Filter -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form id="filter-form" class="row g-3 align-items-end">
+                            <div class="col-md-8">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="searchQuery" placeholder="Search articles...">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-search"></i> Search
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <select id="filterStatus" class="form-select">
+                                    <option value="" selected>All articles</option>
+                                    <option value="1">Published</option>
+                                    <option value="0">Drafts</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Article List -->
+                <div id="articles-container">
+                    <!-- Articles will be loaded here -->
+                    <div class="text-center py-5" id="loading">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading articles...</p>
+                    </div>
+                    
+                    <div id="article-list" class="d-none">
+                        <!-- Article template - will be cloned by JS -->
+                        <div class="card mb-4 article-item">
+                            <div class="card-body">
+                                <h3 class="card-title article-title">
+                                    <a href="#" class="text-decoration-none article-link">Article Title</a>
+                                </h3>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <div class="text-muted small">
+                                        <span class="me-3"><i class="fas fa-user me-1"></i> <span class="article-author">Author Name</span></span>
+                                        <span><i class="fas fa-calendar me-1"></i> <span class="article-date">Jan 1, 2023</span></span>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-primary me-1"><i class="fas fa-eye me-1"></i> <span class="article-views">0</span></span>
+                                        <span class="badge bg-danger me-1"><i class="fas fa-heart me-1"></i> <span class="article-likes">0</span></span>
+                                        <span class="badge bg-warning"><i class="fas fa-bookmark me-1"></i> <span class="article-collects">0</span></span>
+                                    </div>
+                                </div>
+                                <p class="card-text article-summary">Article summary goes here...</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="article-tags">
+                                        <span class="badge bg-secondary me-1">tag1</span>
+                                        <span class="badge bg-secondary me-1">tag2</span>
+                                    </div>
+                                    <a href="#" class="btn btn-sm btn-outline-primary article-link">Read More</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- No articles message -->
+                        <div id="no-articles" class="alert alert-info text-center d-none">
+                            <i class="fas fa-info-circle me-2"></i> No articles found.
+                        </div>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <nav aria-label="Page navigation" class="my-4">
+                        <ul class="pagination justify-content-center" id="pagination">
+                            <!-- Pagination will be added by JS -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-md-4">
+                <!-- Create Article Card (only visible when logged in) -->
+                <div class="card mb-4 auth-required force-hide">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Share Your Knowledge</h5>
+                        <p class="card-text">Have something to share with the community?</p>
+                        <a href="/articles/create" class="btn btn-primary">
+                            <i class="fas fa-pen me-1"></i> Write an Article
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Top Articles -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Popular Articles</h5>
+                    </div>
+                    <div class="list-group list-group-flush" id="popular-articles">
+                        <!-- Will be populated by JS -->
+                        <div class="list-group-item d-flex justify-content-between align-items-center text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span>Loading popular articles...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts fragment for this page -->
+    <th:block th:fragment="scripts">
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                const articlesContainer = document.getElementById('articles-container');
+                const articleList = document.getElementById('article-list');
+                const articleTemplate = document.querySelector('.article-item');
+                const loading = document.getElementById('loading');
+                const noArticles = document.getElementById('no-articles');
+                const paginationElement = document.getElementById('pagination');
+                const popularArticles = document.getElementById('popular-articles');
+                const filterForm = document.getElementById('filter-form');
+                
+                // Current page and filter state
+                let currentPage = 1;
+                let pageSize = 10;
+                let authorId = null;
+                let status = null;
+                
+                // Remove the template from the DOM
+                articleTemplate.remove();
+                
+                // Load articles on page load
+                loadArticles();
+                loadPopularArticles();
+                
+                // Filter form submission
+                filterForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    currentPage = 1;
+                    status = document.getElementById('filterStatus').value || null;
+                    loadArticles();
+                });
+                
+                // Function to load articles
+                function loadArticles() {
+                    // Show loading
+                    loading.classList.remove('d-none');
+                    articleList.classList.add('d-none');
+                    
+                    // Build API URL with query parameters
+                    let url = `/api/articles?pageNum=${currentPage}&pageSize=${pageSize}`;
+                    if (authorId) url += `&authorId=${authorId}`;
+                    if (status) url += `&status=${status}`;
+                    
+                    // Fetch articles from API
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(data => {
+                            // Hide loading
+                            loading.classList.add('d-none');
+                            articleList.classList.remove('d-none');
+                            
+                            // Clear current articles
+                            const articleListContainer = document.createElement('div');
+                            articleListContainer.id = 'article-list';
+                            
+                            if (data.status.code === 0 && data.result.records.length > 0) {
+                                // Create and append article elements
+                                data.result.records.forEach(article => {
+                                    const articleElement = createArticleElement(article);
+                                    articleListContainer.appendChild(articleElement);
+                                });
+                                
+                                // Update pagination
+                                updatePagination(data.result);
+                                
+                                // Show articles
+                                noArticles.classList.add('d-none');
+                            } else {
+                                // Show no articles message
+                                articleListContainer.appendChild(noArticles);
+                                noArticles.classList.remove('d-none');
+                                paginationElement.innerHTML = '';
+                            }
+                            
+                            // Replace current article list with new one
+                            articleList.replaceWith(articleListContainer);
+                        })
+                        .catch(error => {
+                            console.error('Error loading articles:', error);
+                            loading.classList.add('d-none');
+                            articleList.classList.remove('d-none');
+                            noArticles.textContent = 'Error loading articles. Please try again.';
+                            noArticles.classList.remove('d-none');
+                        });
+                }
+                
+                // Function to create article element
+                function createArticleElement(article) {
+                    const articleClone = articleTemplate.cloneNode(true);
+                    
+                    // Set article data
+                    articleClone.querySelector('.article-title').textContent = article.title;
+                    articleClone.querySelector('.article-summary').textContent = article.summary || article.content.substring(0, 150) + '...';
+                    articleClone.querySelector('.article-author').textContent = article.authorUsername || 'Anonymous';
+                    articleClone.querySelector('.article-date').textContent = formatDate(article.createdAt);
+                    articleClone.querySelector('.article-views').textContent = article.viewCount || 0;
+                    articleClone.querySelector('.article-likes').textContent = article.likeCount || 0;
+                    articleClone.querySelector('.article-collects').textContent = article.collectCount || 0;
+                    
+                    // Set article links
+                    const links = articleClone.querySelectorAll('.article-link');
+                    links.forEach(link => {
+                        link.href = `/articles/${article.id}`;
+                    });
+                    
+                    // Set article tags if available
+                    if (article.tags && article.tags.length > 0) {
+                        const tagsContainer = articleClone.querySelector('.article-tags');
+                        tagsContainer.innerHTML = '';
+                        article.tags.forEach(tag => {
+                            const tagElement = document.createElement('span');
+                            tagElement.classList.add('badge', 'bg-secondary', 'me-1');
+                            tagElement.textContent = tag;
+                            tagsContainer.appendChild(tagElement);
+                        });
+                    } else {
+                        articleClone.querySelector('.article-tags').classList.add('d-none');
+                    }
+                    
+                    return articleClone;
+                }
+                
+                // Function to update pagination
+                function updatePagination(pageData) {
+                    paginationElement.innerHTML = '';
+                    
+                    // Only show pagination if there are multiple pages
+                    if (pageData.pages <= 1) return;
+                    
+                    // Previous button
+                    const prevItem = document.createElement('li');
+                    prevItem.classList.add('page-item');
+                    if (currentPage === 1) prevItem.classList.add('disabled');
+                    
+                    const prevLink = document.createElement('a');
+                    prevLink.classList.add('page-link');
+                    prevLink.href = '#';
+                    prevLink.setAttribute('aria-label', 'Previous');
+                    prevLink.innerHTML = '<span aria-hidden="true">&laquo;</span>';
+                    prevLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                            currentPage--;
+                            loadArticles();
+                        }
+                    });
+                    
+                    prevItem.appendChild(prevLink);
+                    paginationElement.appendChild(prevItem);
+                    
+                    // Page numbers
+                    let startPage = Math.max(1, currentPage - 2);
+                    let endPage = Math.min(pageData.pages, startPage + 4);
+                    
+                    for (let i = startPage; i <= endPage; i++) {
+                        const pageItem = document.createElement('li');
+                        pageItem.classList.add('page-item');
+                        if (i === currentPage) pageItem.classList.add('active');
+                        
+                        const pageLink = document.createElement('a');
+                        pageLink.classList.add('page-link');
+                        pageLink.href = '#';
+                        pageLink.textContent = i;
+                        pageLink.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            currentPage = i;
+                            loadArticles();
+                        });
+                        
+                        pageItem.appendChild(pageLink);
+                        paginationElement.appendChild(pageItem);
+                    }
+                    
+                    // Next button
+                    const nextItem = document.createElement('li');
+                    nextItem.classList.add('page-item');
+                    if (currentPage === pageData.pages) nextItem.classList.add('disabled');
+                    
+                    const nextLink = document.createElement('a');
+                    nextLink.classList.add('page-link');
+                    nextLink.href = '#';
+                    nextLink.setAttribute('aria-label', 'Next');
+                    nextLink.innerHTML = '<span aria-hidden="true">&raquo;</span>';
+                    nextLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (currentPage < pageData.pages) {
+                            currentPage++;
+                            loadArticles();
+                        }
+                    });
+                    
+                    nextItem.appendChild(nextLink);
+                    paginationElement.appendChild(nextItem);
+                }
+                
+                // Function to load popular articles
+                function loadPopularArticles() {
+                    // This would fetch popular articles from a different endpoint
+                    // For now, we'll just simulate it
+                    setTimeout(() => {
+                        popularArticles.innerHTML = '';
+                        
+                        // For demo, just show some dummy popular articles
+                        for (let i = 1; i <= 5; i++) {
+                            const article = document.createElement('a');
+                            article.classList.add('list-group-item', 'list-group-item-action');
+                            article.href = `/articles/${i}`;
+                            
+                            const title = document.createElement('div');
+                            title.classList.add('fw-bold');
+                            title.textContent = `Popular Article ${i}`;
+                            
+                            const stats = document.createElement('div');
+                            stats.classList.add('d-flex', 'justify-content-between', 'small', 'text-muted', 'mt-1');
+                            stats.innerHTML = `
+                                <span><i class="fas fa-eye me-1"></i> ${100 + i * 10}</span>
+                                <span><i class="fas fa-heart me-1"></i> ${20 + i * 5}</span>
+                            `;
+                            
+                            article.appendChild(title);
+                            article.appendChild(stats);
+                            popularArticles.appendChild(article);
+                        }
+                    }, 1000);
+                }
+                
+                // Helper function to format date
+                function formatDate(dateString) {
+                    if (!dateString) return 'Unknown';
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                }
+                
+                // Check auth status to show/hide certain elements
+                function checkAuthStatus() {
+                    const token = localStorage.getItem('jwt_token');
+                    const authRequired = document.querySelectorAll('.auth-required');
+                    
+                    if (token) {
+                        // User is logged in
+                        authRequired.forEach(el => {
+                            el.classList.remove('force-hide');
+                            el.classList.add('force-show');
+                        });
+                    } else {
+                        // User is not logged in
+                        authRequired.forEach(el => {
+                            el.classList.remove('force-show');
+                            el.classList.add('force-hide');
+                        });
+                    }
+                }
+                
+                // Check auth status on page load
+                checkAuthStatus();
+            });
+        </script>
+    </th:block>
+</body>
+</html> 

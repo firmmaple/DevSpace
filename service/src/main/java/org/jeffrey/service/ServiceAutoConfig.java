@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 @ComponentScan("org.jeffrey.service")
 @MapperScan(basePackageClasses = {
         org.jeffrey.service.user.repository.mapper.UserMapper.class,
+        org.jeffrey.service.article.repository.mapper.ArticleMapper.class,
 })
 public class ServiceAutoConfig {
 }

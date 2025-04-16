@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <title>Article Detail - DevSpace</title>
+</head>
+<body>
+    <!-- Content fragment to be injected into the main layout -->
+    <div th:fragment="content">
+        <div class="row my-4">
+            <!-- Article Content -->
+            <div class="col-lg-8">
+                <div id="article-loading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading article...</p>
+                </div>
+                
+                <!-- Article Detail Container -->
+                <div id="article-container" class="d-none">
+                    <!-- Article Header -->
+                    <div class="mb-4">
+                        <h1 id="article-title" class="display-5 fw-bold mb-3">Article Title</h1>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center">
+                                <img id="author-avatar" src="https://via.placeholder.com/40" class="rounded-circle me-2" alt="Author Avatar" width="40" height="40">
+                                <div>
+                                    <div id="author-name" class="fw-bold">Author Name</div>
+                                    <div class="text-muted small">
+                                        <span><i class="fas fa-calendar me-1"></i> <span id="article-date">Jan 1, 2023</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge bg-primary me-1"><i class="fas fa-eye me-1"></i> <span id="article-views">0</span></span>
+                                <span class="badge bg-danger me-1"><i class="fas fa-heart me-1"></i> <span id="article-likes">0</span></span>
+                                <span class="badge bg-warning"><i class="fas fa-bookmark me-1"></i> <span id="article-collects">0</span></span>
+                            </div>
+                        </div>
+                        <div id="article-tags" class="mb-3">
+                            <!-- Tags will be populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Article Content -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div id="article-content" class="article-content">
+                                <!-- Article content will go here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Article Actions -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex">
+                                    <!-- Like Button -->
+                                    <button id="like-button" class="btn btn-outline-danger me-2 auth-required force-hide">
+                                        <i class="fas fa-heart me-1"></i> <span id="like-text">Like</span>
+                                    </button>
+                                    
+                                    <!-- Collect Button -->
+                                    <button id="collect-button" class="btn btn-outline-warning me-2 auth-required force-hide">
+                                        <i class="fas fa-bookmark me-1"></i> <span id="collect-text">Collect</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Author Actions -->
+                                <div id="author-actions" class="d-none">
+                                    <a id="edit-button" href="#" class="btn btn-outline-primary me-2">
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </a>
+                                    <button id="delete-button" class="btn btn-outline-danger">
+                                        <i class="fas fa-trash-alt me-1"></i> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Comments Section -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Comments <span id="comment-count" class="badge bg-secondary ms-1">0</span></h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Comment Form - only visible when logged in -->
+                            <div id="comment-form-container" class="mb-4 auth-required force-hide">
+                                <form id="comment-form">
+                                    <div class="mb-3">
+                                        <textarea id="comment-content" class="form-control" rows="3" placeholder="Write your comment here..."></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane me-1"></i> Post Comment
+                                    </button>
+                                </form>
+                            </div>
+                            
+                            <!-- Login to Comment Message - only visible when not logged in -->
+                            <div id="login-to-comment" class="alert alert-info mb-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <a href="/login" class="alert-link">Login</a> to post a comment.
+                            </div>
+                            
+                            <!-- Comments List -->
+                            <div id="comments-list">
+                                <!-- Comments will be loaded here -->
+                                <div id="comments-loading" class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading comments...</span>
+                                    </div>
+                                    <span class="ms-2">Loading comments...</span>
+                                </div>
+                                
+                                <div id="no-comments" class="alert alert-info text-center d-none">
+                                    <i class="fas fa-comments me-2"></i> No comments yet. Be the first to comment!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Article Not Found -->
+                <div id="article-not-found" class="alert alert-warning text-center d-none">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span>Article not found. The article might have been removed or you don't have permission to view it.</span>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Author Card -->
+                <div id="author-card" class="card mb-4 d-none">
+                    <div class="card-body text-center">
+                        <img id="author-card-avatar" src="https://via.placeholder.com/100" class="rounded-circle mb-3" width="100" height="100" alt="Author Avatar">
+                        <h5 id="author-card-name" class="card-title">Author Name</h5>
+                        <p id="author-card-bio" class="card-text text-muted">Author bio goes here...</p>
+                        <a id="author-card-profile" href="#" class="btn btn-outline-primary">
+                            <i class="fas fa-user me-1"></i> View Profile
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Related Articles -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Related Articles</h5>
+                    </div>
+                    <div id="related-articles" class="list-group list-group-flush">
+                        <!-- Will be populated by JS -->
+                        <div class="list-group-item text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span class="ms-2">Loading related articles...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tags -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Popular Tags</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="popular-tags" class="d-flex flex-wrap">
+                            <!-- Will be populated by JS -->
+                            <div class="text-center w-100 py-2">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="ms-2">Loading tags...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delete Confirmation Modal -->
+        <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete this article? This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="confirm-delete">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts fragment for this page -->
+    <th:block th:fragment="scripts">
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                // Get article ID from URL
+                const urlParts = window.location.pathname.split('/');
+                const articleId = urlParts[urlParts.length - 1];
+                
+                // Elements
+                const articleContainer = document.getElementById('article-container');
+                const articleLoading = document.getElementById('article-loading');
+                const articleNotFound = document.getElementById('article-not-found');
+                const authorActions = document.getElementById('author-actions');
+                const likeButton = document.getElementById('like-button');
+                const collectButton = document.getElementById('collect-button');
+                const commentForm = document.getElementById('comment-form');
+                const deleteButton = document.getElementById('delete-button');
+                const confirmDeleteButton = document.getElementById('confirm-delete');
+                
+                // Current user info
+                let currentUser = null;
+                let isAuthor = false;
+                let isLiked = false;
+                let isCollected = false;
+                
+                // Check auth status
+                function checkAuthStatus() {
+                    const token = localStorage.getItem('jwt_token');
+                    const authRequired = document.querySelectorAll('.auth-required');
+                    const loginToComment = document.getElementById('login-to-comment');
+                    
+                    if (token) {
+                        // User is logged in
+                        authRequired.forEach(el => {
+                            el.classList.remove('force-hide');
+                            el.classList.add('force-show');
+                        });
+                        loginToComment.classList.add('d-none');
+                        
+                        // Decode token to get user ID (simple JWT decoding)
+                        try {
+                            const base64Url = token.split('.')[1];
+                            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                            }).join(''));
+                            
+                            currentUser = JSON.parse(jsonPayload);
+                        } catch (e) {
+                            console.error('Error decoding token:', e);
+                        }
+                    } else {
+                        // User is not logged in
+                        authRequired.forEach(el => {
+                            el.classList.remove('force-show');
+                            el.classList.add('force-hide');
+                        });
+                        loginToComment.classList.remove('d-none');
+                    }
+                }
+                
+                // Load article details
+                function loadArticle() {
+                    fetch(`/api/articles/${articleId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            articleLoading.classList.add('d-none');
+                            
+                            if (data.status.code === 0 && data.result) {
+                                const article = data.result;
+                                
+                                // Update page title
+                                document.title = `${article.title} - DevSpace`;
+                                
+                                // Populate article data
+                                document.getElementById('article-title').textContent = article.title;
+                                document.getElementById('author-name').textContent = article.authorUsername || 'Anonymous';
+                                document.getElementById('article-date').textContent = formatDate(article.createdAt);
+                                document.getElementById('article-views').textContent = article.viewCount || 0;
+                                document.getElementById('article-likes').textContent = article.likeCount || 0;
+                                document.getElementById('article-collects').textContent = article.collectCount || 0;
+                                document.getElementById('article-content').innerHTML = article.content || 'No content available.';
+                                
+                                // Set author card
+                                document.getElementById('author-card-name').textContent = article.authorUsername || 'Anonymous';
+                                document.getElementById('author-card-profile').href = `/users/${article.authorId}`;
+                                document.getElementById('author-card').classList.remove('d-none');
+                                
+                                // Set avatar (placeholder for now)
+                                const avatar = article.authorAvatar || 'https://via.placeholder.com/100';
+                                document.getElementById('author-avatar').src = avatar;
+                                document.getElementById('author-card-avatar').src = avatar;
+                                
+                                // Handle tags
+                                const tagsContainer = document.getElementById('article-tags');
+                                tagsContainer.innerHTML = '';
+                                if (article.tags && article.tags.length > 0) {
+                                    article.tags.forEach(tag => {
+                                        const tagElement = document.createElement('span');
+                                        tagElement.classList.add('badge', 'bg-secondary', 'me-1');
+                                        tagElement.textContent = tag;
+                                        tagsContainer.appendChild(tagElement);
+                                    });
+                                }
+                                
+                                // Check if current user is author
+                                if (currentUser && article.authorId === currentUser.sub) {
+                                    isAuthor = true;
+                                    authorActions.classList.remove('d-none');
+                                    document.getElementById('edit-button').href = `/articles/edit/${articleId}`;
+                                }
+                                
+                                // Check if user has liked or collected
+                                isLiked = article.likedByCurrentUser || false;
+                                isCollected = article.collectedByCurrentUser || false;
+                                
+                                updateLikeButton();
+                                updateCollectButton();
+                                
+                                // Show article container
+                                articleContainer.classList.remove('d-none');
+                                
+                                // Load comments
+                                loadComments();
+                                
+                                // Load related articles
+                                loadRelatedArticles(article.tags);
+                            } else {
+                                // Article not found
+                                articleNotFound.classList.remove('d-none');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading article:', error);
+                            articleLoading.classList.add('d-none');
+                            articleNotFound.classList.remove('d-none');
+                        });
+                }
+                
+                // Update the like button state
+                function updateLikeButton() {
+                    if (isLiked) {
+                        likeButton.classList.remove('btn-outline-danger');
+                        likeButton.classList.add('btn-danger');
+                        likeButton.querySelector('#like-text').textContent = 'Liked';
+                    } else {
+                        likeButton.classList.remove('btn-danger');
+                        likeButton.classList.add('btn-outline-danger');
+                        likeButton.querySelector('#like-text').textContent = 'Like';
+                    }
+                }
+                
+                // Update the collect button state
+                function updateCollectButton() {
+                    if (isCollected) {
+                        collectButton.classList.remove('btn-outline-warning');
+                        collectButton.classList.add('btn-warning');
+                        collectButton.querySelector('#collect-text').textContent = 'Collected';
+                    } else {
+                        collectButton.classList.remove('btn-warning');
+                        collectButton.classList.add('btn-outline-warning');
+                        collectButton.querySelector('#collect-text').textContent = 'Collect';
+                    }
+                }
+                
+                // Handle like button click
+                likeButton.addEventListener('click', function() {
+                    if (!currentUser) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    
+                    const method = isLiked ? 'DELETE' : 'POST';
+                    fetch(`/api/articles/${articleId}/like`, {
+                        method: method,
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status.code === 0) {
+                            isLiked = !isLiked;
+                            updateLikeButton();
+                            
+                            // Update like count
+                            const likeCount = document.getElementById('article-likes');
+                            let count = parseInt(likeCount.textContent);
+                            likeCount.textContent = isLiked ? (count + 1) : (count - 1);
+                        }
+                    })
+                    .catch(error => console.error('Error toggling like:', error));
+                });
+                
+                // Handle collect button click
+                collectButton.addEventListener('click', function() {
+                    if (!currentUser) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    
+                    const method = isCollected ? 'DELETE' : 'POST';
+                    fetch(`/api/articles/${articleId}/collect`, {
+                        method: method,
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status.code === 0) {
+                            isCollected = !isCollected;
+                            updateCollectButton();
+                            
+                            // Update collect count
+                            const collectCount = document.getElementById('article-collects');
+                            let count = parseInt(collectCount.textContent);
+                            collectCount.textContent = isCollected ? (count + 1) : (count - 1);
+                        }
+                    })
+                    .catch(error => console.error('Error toggling collect:', error));
+                });
+                
+                // Handle comment form submission
+                if (commentForm) {
+                    commentForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        
+                        const commentContent = document.getElementById('comment-content').value.trim();
+                        if (!commentContent) return;
+                        
+                        fetch(`/api/articles/${articleId}/comments`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                            },
+                            body: JSON.stringify({
+                                content: commentContent
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status.code === 0) {
+                                // Clear form
+                                document.getElementById('comment-content').value = '';
+                                
+                                // Reload comments
+                                loadComments();
+                            }
+                        })
+                        .catch(error => console.error('Error posting comment:', error));
+                    });
+                }
+                
+                // Handle delete button click
+                deleteButton.addEventListener('click', function() {
+                    // Show delete confirmation modal
+                    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+                });
+                
+                // Handle confirm delete
+                confirmDeleteButton.addEventListener('click', function() {
+                    fetch(`/api/articles/${articleId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status.code === 0) {
+                            // Redirect to articles list
+                            window.location.href = '/articles';
+                        }
+                    })
+                    .catch(error => console.error('Error deleting article:', error));
+                });
+                
+                // Load comments
+                function loadComments() {
+                    const commentsLoading = document.getElementById('comments-loading');
+                    const noComments = document.getElementById('no-comments');
+                    const commentsList = document.getElementById('comments-list');
+                    
+                    // This would fetch comments from a comments API
+                    // For now, we'll just simulate it
+                    setTimeout(() => {
+                        commentsLoading.classList.add('d-none');
+                        
+                        // For demo, just show no comments message
+                        noComments.classList.remove('d-none');
+                        
+                        // Update comment count
+                        document.getElementById('comment-count').textContent = 0;
+                    }, 1000);
+                }
+                
+                // Load related articles
+                function loadRelatedArticles(tags) {
+                    const relatedArticles = document.getElementById('related-articles');
+                    
+                    // This would fetch related articles from an API
+                    // For now, we'll just simulate it
+                    setTimeout(() => {
+                        relatedArticles.innerHTML = '';
+                        
+                        // For demo, just show some dummy related articles
+                        for (let i = 1; i <= 3; i++) {
+                            const article = document.createElement('a');
+                            article.classList.add('list-group-item', 'list-group-item-action');
+                            article.href = `/articles/${i}`;
+                            article.textContent = `Related Article ${i}`;
+                            relatedArticles.appendChild(article);
+                        }
+                    }, 1000);
+                    
+                    // Also load popular tags
+                    setTimeout(() => {
+                        const popularTags = document.getElementById('popular-tags');
+                        popularTags.innerHTML = '';
+                        
+                        // For demo, just show some dummy tags
+                        const demoTags = ['Java', 'Spring', 'DevOps', 'Microservices', 'Security', 'Frontend', 'React', 'Cloud'];
+                        demoTags.forEach(tag => {
+                            const tagElement = document.createElement('a');
+                            tagElement.classList.add('badge', 'bg-secondary', 'me-1', 'mb-1', 'text-decoration-none');
+                            tagElement.href = `/articles?tag=${tag}`;
+                            tagElement.textContent = tag;
+                            popularTags.appendChild(tagElement);
+                        });
+                    }, 1000);
+                }
+                
+                // Helper function to format date
+                function formatDate(dateString) {
+                    if (!dateString) return 'Unknown';
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                }
+                
+                // Initialize page
+                checkAuthStatus();
+                loadArticle();
+            });
+        </script>
+    </th:block>
+</body>
+</html> 
