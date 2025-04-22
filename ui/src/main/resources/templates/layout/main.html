@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="layout/header :: headerFragment">
+<head th:replace="~{layout/header :: headerFragment}">
     <title>DevSpace</title>
 </head>
 <body>
     <!-- Navigation -->
-    <header th:replace="layout/header :: navbar"></header>
+    <header th:replace="~{layout/header :: navbar}"></header>
     
     <!-- Main Content -->
     <main class="main-content">
@@ -43,10 +43,29 @@
         </div>
     </footer>
     
+    <!-- Auth JS and main scripts -->
+    <script th:src="@{/js/auth.js}"></script>
+    <script th:src="@{/js/header.js}"></script>
+    
     <!-- Bootstrap JS -->
     <script th:src="@{https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js}"></script>
     
     <!-- Additional scripts from child templates -->
-    <th:block th:replace="${viewName} :: scripts"></th:block>
+    <th:block th:replace="~{${viewName} :: scripts}"></th:block>
+    
+    <script>
+        // Global script to ensure all API requests include JWT token
+        document.addEventListener('DOMContentLoaded', function() {
+            // Log that JWT initialization is happening
+            console.log('Main layout: Initializing JWT authentication');
+            
+            // Setup JWT interceptor for all fetch requests
+            if (window.AuthUtils) {
+                AuthUtils.init();
+            } else {
+                console.error('AuthUtils not loaded - JWT authentication will not work');
+            }
+        });
+    </script>
 </body>
 </html> 

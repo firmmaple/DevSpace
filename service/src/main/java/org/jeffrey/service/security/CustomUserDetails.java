@@ -2,6 +2,8 @@ package org.jeffrey.service.security;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.jeffrey.api.dto.user.UserDTO;
+import org.jeffrey.service.user.repository.entity.UserDO;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -10,7 +12,23 @@ import java.util.Collection;
 @Data
 @AllArgsConstructor
 public class CustomUserDetails implements UserDetails {
-    private final UserInfo user;
+    //    private final UserInfo user;
+    private final Long userId;
+    private final String username;
+    private final String password;
+    private final boolean isAdmin;
+
+
+    public CustomUserDetails(UserDO userDO) {
+        this.userId = userDO.getId();
+        this.username = userDO.getUsername();
+        this.password = userDO.getPassword();
+        this.isAdmin = userDO.getIsAdmin();
+    }
+
+    public UserDTO toUserDTO(){
+       return new UserDTO(userId, username, password, isAdmin);
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -19,12 +37,12 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getPassword() {
-        return user.getPassword();
+        return password;
     }
 
     @Override
     public String getUsername() {
-        return user.getUsername();
+        return username;
     }
 
     @Override

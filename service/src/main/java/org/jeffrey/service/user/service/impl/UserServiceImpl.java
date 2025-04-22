@@ -4,16 +4,21 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.jeffrey.service.user.repository.entity.UserDO;
 import org.jeffrey.service.user.repository.mapper.UserMapper;
 import org.jeffrey.service.user.service.UserService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
+
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements UserService {
     private final PasswordEncoder passwordEncoder;
+
+    public UserServiceImpl(@Lazy PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Override
     public List<UserDO> getAllUsers() {

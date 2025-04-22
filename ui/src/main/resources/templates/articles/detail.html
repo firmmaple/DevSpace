@@ -262,7 +262,7 @@
                 
                 // Load article details
                 function loadArticle() {
-                    fetch(`/api/articles/${articleId}`)
+                    AuthUtils.authenticatedFetch(`/api/articles/${articleId}`)
                         .then(response => response.json())
                         .then(data => {
                             articleLoading.classList.add('d-none');

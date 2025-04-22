@@ -5,11 +5,13 @@ import org.jeffrey.api.vo.ResVo;
 import org.jeffrey.api.vo.StatusEnum;
 import org.jeffrey.service.security.CustomUserDetails;
 import org.jeffrey.core.security.JWTUtil;
-import org.jeffrey.service.security.UserInfo;
+import org.jeffrey.api.dto.user.UserDTO;
 import org.jeffrey.core.trace.TraceLog;
+import org.jeffrey.service.security.OnlineUserService;
 import org.jeffrey.service.user.service.UserService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -25,6 +27,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JWTUtil jwtUtil;
     private final UserService userService;
+    private final OnlineUserService onlineUserService;
 
     /**
      * Renders the login page.
@@ -75,6 +78,7 @@ public class AuthController {
     @ResponseBody
     @TraceLog("用户登录")
     public ResVo<Map<String, Object>> authenticateUser(@RequestParam String username, @RequestParam String password) {
+
         // 构造认证token
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                 username, password
@@ -87,14 +91,15 @@ public class AuthController {
         // 获取用户详情并生成token
         CustomUserDetails userDetails = (CustomUserDetails) authenticationToken.getPrincipal();
         String token = jwtUtil.generateToken(userDetails);
+        onlineUserService.save(userDetails.getUsername(), token);
         
         // 记录认证成功的用户信息
-        UserInfo userInfo = userDetails.getUser();
-        
+        UserDTO userDTO = userDetails.toUserDTO();
+
         // 创建认证信息返回对象
         Map<String, Object> authInfo = new HashMap<>(2);
         authInfo.put("token", token);
-        authInfo.put("user", userInfo);
+        authInfo.put("user", userDTO);
         
         return ResVo.ok(authInfo);
     }
@@ -138,6 +143,10 @@ public class AuthController {
     @ResponseBody
     public ResVo<String> logout() {
         // Clear security context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+
+        onlineUserService.logout(userDetails.getUsername());
         SecurityContextHolder.clearContext();
         return ResVo.ok("Logged out successfully");
     }

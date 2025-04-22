@@ -106,6 +106,27 @@ fetch('/api/user/profile')
   });
 ```
 
+### 前端使用 authenticatedFetch
+
+为确保所有API请求都包含JWT认证令牌，应使用`AuthUtils.authenticatedFetch`方法替代原生`fetch`：
+
+```javascript
+// 使用authenticatedFetch自动添加JWT令牌
+AuthUtils.authenticatedFetch('/api/user/profile')
+  .then(response => response.json())
+  .then(data => {
+    if (data.status.code === 0) {
+      // 处理成功响应
+      renderUserProfile(data.result);
+    } else {
+      // 处理错误
+      showError(data.status.msg);
+    }
+  });
+```
+
+默认情况下，所有需要认证的API都应使用`authenticatedFetch`方法发送请求，这样可以确保请求头中包含有效的JWT令牌。
+
 ## 错误码示例
 
 | 错误码 | 描述 | 场景 |

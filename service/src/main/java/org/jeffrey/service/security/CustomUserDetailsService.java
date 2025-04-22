@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
     private final UserService userService;
-    private final UserDoToUserInfoConverter userDoToUserInfoConverter;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -24,8 +23,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                     return new UsernameNotFoundException("用户名不存在！");
                 });
 
-        return new CustomUserDetails(
-                userDoToUserInfoConverter.convert(UserDO)
-        );
+        return new CustomUserDetails(UserDO);
     }
 }

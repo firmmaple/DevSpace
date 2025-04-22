@@ -164,47 +164,64 @@
                     if (authorId) url += `&authorId=${authorId}`;
                     if (status) url += `&status=${status}`;
                     
-                    // Fetch articles from API
-                    fetch(url)
-                        .then(response => response.json())
-                        .then(data => {
-                            // Hide loading
-                            loading.classList.add('d-none');
-                            articleList.classList.remove('d-none');
-                            
-                            // Clear current articles
-                            const articleListContainer = document.createElement('div');
-                            articleListContainer.id = 'article-list';
-                            
-                            if (data.status.code === 0 && data.result.records.length > 0) {
-                                // Create and append article elements
-                                data.result.records.forEach(article => {
-                                    const articleElement = createArticleElement(article);
-                                    articleListContainer.appendChild(articleElement);
-                                });
-                                
-                                // Update pagination
-                                updatePagination(data.result);
-                                
-                                // Show articles
-                                noArticles.classList.add('d-none');
-                            } else {
-                                // Show no articles message
-                                articleListContainer.appendChild(noArticles);
-                                noArticles.classList.remove('d-none');
-                                paginationElement.innerHTML = '';
-                            }
-                            
-                            // Replace current article list with new one
-                            articleList.replaceWith(articleListContainer);
-                        })
-                        .catch(error => {
-                            console.error('Error loading articles:', error);
-                            loading.classList.add('d-none');
-                            articleList.classList.remove('d-none');
-                            noArticles.textContent = 'Error loading articles. Please try again.';
-                            noArticles.classList.remove('d-none');
+                    // Check if AuthUtils is available
+                    if (typeof AuthUtils === 'undefined') {
+                        console.error('AuthUtils is not defined. Make sure auth.js is loaded properly.');
+                        
+                        // Fallback to regular fetch
+                        fetch(url)
+                            .then(response => response.json())
+                            .then(handleArticlesResponse)
+                            .catch(handleFetchError);
+                    } else {
+                        // Fetch articles from API with authentication
+                        AuthUtils.authenticatedFetch(url, {})
+                            .then(response => response.json())
+                            .then(handleArticlesResponse)
+                            .catch(handleFetchError);
+                    }
+                }
+                
+                // Extracted response handling function
+                function handleArticlesResponse(data) {
+                    // Hide loading
+                    loading.classList.add('d-none');
+                    articleList.classList.remove('d-none');
+                    
+                    // Clear current articles
+                    const articleListContainer = document.createElement('div');
+                    articleListContainer.id = 'article-list';
+                    
+                    if (data.status.code === 0 && data.result.records.length > 0) {
+                        // Create and append article elements
+                        data.result.records.forEach(article => {
+                            const articleElement = createArticleElement(article);
+                            articleListContainer.appendChild(articleElement);
                         });
+                        
+                        // Update pagination
+                        updatePagination(data.result);
+                        
+                        // Show articles
+                        noArticles.classList.add('d-none');
+                    } else {
+                        // Show no articles message
+                        articleListContainer.appendChild(noArticles);
+                        noArticles.classList.remove('d-none');
+                        paginationElement.innerHTML = '';
+                    }
+                    
+                    // Replace current article list with new one
+                    articleList.replaceWith(articleListContainer);
+                }
+                
+                // Error handling function
+                function handleFetchError(error) {
+                    console.error('Error loading articles:', error);
+                    loading.classList.add('d-none');
+                    articleList.classList.remove('d-none');
+                    noArticles.textContent = 'Error loading articles. Please try again.';
+                    noArticles.classList.remove('d-none');
                 }
                 
                 // Function to create article element

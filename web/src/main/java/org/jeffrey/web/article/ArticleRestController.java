@@ -9,7 +9,7 @@ import org.jeffrey.api.vo.Article.ArticleVO;
 import org.jeffrey.api.vo.ResVo;
 import org.jeffrey.core.trace.TraceLog;
 import org.jeffrey.service.article.service.ArticleService;
-import org.jeffrey.core.security.CustomUserDetails;
+import org.jeffrey.service.security.CustomUserDetails;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,7 +24,7 @@ public class ArticleRestController {
     @TraceLog("发布新文章API")
     public ResVo<ArticleVO> createArticle(@RequestBody ArticleCreateDTO createDTO,
                                           @AuthenticationPrincipal CustomUserDetails currentUser) {
-        Long authorId = currentUser.getId();
+        Long authorId = currentUser.getUserId();
         ArticleVO createdArticle = articleService.createArticle(createDTO, authorId);
         return ResVo.ok(createdArticle);
     }
@@ -33,7 +33,7 @@ public class ArticleRestController {
     @TraceLog("获取文章详情API")
     public ResVo<ArticleVO> getArticle(@PathVariable Long id,
                                        @AuthenticationPrincipal CustomUserDetails currentUser) {
-        Long currentUserId = (currentUser != null) ? currentUser.getId() : null;
+        Long currentUserId = (currentUser != null) ? currentUser.getUserId() : null;
         ArticleVO article = articleService.getArticleById(id, currentUserId);
         // Handle not found in service layer via exception, caught by global handler
         return ResVo.ok(article);
@@ -45,7 +45,7 @@ public class ArticleRestController {
     public ResVo<ArticleVO> updateArticle(@PathVariable Long id,
                                           @RequestBody ArticleUpdateDTO updateDTO,
                                           @AuthenticationPrincipal CustomUserDetails currentUser) {
-        ArticleVO updatedArticle = articleService.updateArticle(id, updateDTO, currentUser.getId());
+        ArticleVO updatedArticle = articleService.updateArticle(id, updateDTO, currentUser.getUserId());
         return ResVo.ok(updatedArticle);
     }
 
@@ -54,7 +54,7 @@ public class ArticleRestController {
     @TraceLog("删除文章API")
     public ResVo<String> deleteArticle(@PathVariable Long id,
                                        @AuthenticationPrincipal CustomUserDetails currentUser) {
-        articleService.deleteArticle(id, currentUser.getId());
+        articleService.deleteArticle(id, currentUser.getUserId());
         return ResVo.ok(); // Return success status
     }
 

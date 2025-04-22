@@ -254,7 +254,7 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
     - Thymeleaf 模板引擎渲染的注册和登录页面
     - Bootstrap 5.3 提供的样式和布局
     - 客户端 JavaScript 验证
-    - Fetch API 进行 AJAX 请求
+    - 使用 `AuthUtils.authenticatedFetch` 替代原生 fetch 发送 AJAX 请求，自动添加 JWT 令牌
 
 2. **后端实现**:
     - `AuthController` 处理认证和注册请求
@@ -268,7 +268,31 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
     - `RegisterDTO` 用于注册请求数据传输
     - `ResVo` 通用响应对象封装 API 响应
 
-### 代码位置
+### 前端请求最佳实践
+
+为确保API请求的安全性和一致性，DevSpace遵循以下前端请求规范：
+
+1. **使用authenticatedFetch**: 所有API请求应使用`AuthUtils.authenticatedFetch`而非原生`fetch`，确保请求头中包含JWT令牌
+   ```javascript
+   // 错误: 直接使用原生fetch
+   fetch('/api/articles');
+   
+   // 正确: 使用authenticatedFetch
+   AuthUtils.authenticatedFetch('/api/articles');
+   ```
+
+2. **统一错误处理**: 所有请求应检查响应状态码并进行统一处理
+   ```javascript
+   AuthUtils.authenticatedFetch('/api/data')
+     .then(response => response.json())
+     .then(data => {
+       if (data.status.code === 0) {
+         // 成功处理
+       } else {
+         // 错误处理
+       }
+     });
+   ```
 
 - **UI 模板**:
     - `ui/src/main/resources/templates/register.html` - 注册表单

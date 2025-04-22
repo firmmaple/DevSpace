@@ -1,4 +1,4 @@
-package org.jeffrey.api.dto;
+package org.jeffrey.api.dto.user;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

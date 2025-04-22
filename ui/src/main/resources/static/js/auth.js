@@ -73,7 +73,7 @@ const AuthUtils = {
         if (!options.headers) {
             options.headers = {};
         }
-        
+        console.log("AuthUtils: Adding token to request", token);
         options.headers['Authorization'] = `Bearer ${token}`;
         return options;
     },
@@ -85,7 +85,8 @@ const AuthUtils = {
      * @returns {Promise} Fetch promise
      */
     authenticatedFetch: function(url, options = {}) {
-        return fetch(url, this.addTokenToRequest(options));
+        const requestOptions = this.addTokenToRequest(options);
+        return fetch(url, requestOptions);
     },
 
     /**
@@ -130,4 +131,4 @@ const AuthUtils = {
 };
 
 // Ensure AuthUtils is added to the global window object
-window.AuthUtils = AuthUtils; 
+window.AuthUtils = AuthUtils;
