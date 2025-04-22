@@ -1,5 +1,7 @@
 package org.jeffrey.web.login;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.jeffrey.api.vo.ResVo;
 import org.jeffrey.api.vo.StatusEnum;
@@ -28,6 +30,11 @@ public class AuthController {
     private final JWTUtil jwtUtil;
     private final UserService userService;
     private final OnlineUserService onlineUserService;
+    
+    // Cookie name constant for the JWT token
+    private static final String JWT_COOKIE_NAME = "jwt_token";
+    // Cookie max age in seconds (e.g., 1 day)
+    private static final int COOKIE_MAX_AGE = 86400;
 
     /**
      * Renders the login page.
@@ -77,7 +84,10 @@ public class AuthController {
     @PostMapping("/auth/login")
     @ResponseBody
     @TraceLog("用户登录")
-    public ResVo<Map<String, Object>> authenticateUser(@RequestParam String username, @RequestParam String password) {
+    public ResVo<Map<String, Object>> authenticateUser(
+            @RequestParam String username, 
+            @RequestParam String password,
+            HttpServletResponse response) {
 
         // 构造认证token
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
@@ -93,12 +103,20 @@ public class AuthController {
         String token = jwtUtil.generateToken(userDetails);
         onlineUserService.save(userDetails.getUsername(), token);
         
+        // Set JWT token as an HTTP-only cookie
+        Cookie jwtCookie = new Cookie(JWT_COOKIE_NAME, token);
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setPath("/");
+        jwtCookie.setMaxAge(COOKIE_MAX_AGE);
+        // In production, use this for HTTPS:
+        // jwtCookie.setSecure(true); 
+        response.addCookie(jwtCookie);
+        
         // 记录认证成功的用户信息
         UserDTO userDTO = userDetails.toUserDTO();
 
-        // 创建认证信息返回对象
-        Map<String, Object> authInfo = new HashMap<>(2);
-        authInfo.put("token", token);
+        // 创建认证信息返回对象 (不再返回token，只返回用户信息)
+        Map<String, Object> authInfo = new HashMap<>(1);
         authInfo.put("user", userDTO);
         
         return ResVo.ok(authInfo);
@@ -141,12 +159,21 @@ public class AuthController {
      */
     @PostMapping("/auth/logout")
     @ResponseBody
-    public ResVo<String> logout() {
+    public ResVo<String> logout(HttpServletResponse response) {
         // Clear security context
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-
-        onlineUserService.logout(userDetails.getUsername());
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            onlineUserService.logout(userDetails.getUsername());
+        }
+        
+        // Clear the JWT cookie
+        Cookie jwtCookie = new Cookie(JWT_COOKIE_NAME, null);
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setPath("/");
+        jwtCookie.setMaxAge(0); // Expire immediately
+        response.addCookie(jwtCookie);
+        
         SecurityContextHolder.clearContext();
         return ResVo.ok("Logged out successfully");
     }

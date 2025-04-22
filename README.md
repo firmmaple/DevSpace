@@ -7,7 +7,7 @@ DevSpace是一个基于SpringBoot的博客社区，面向互联网开发者的�
 
 主要目标为通过这个项目学习SpringBoot的使用，写入CV作为个人项目。
 
-[项目文档](.DOCUMENT.md) 中描述了项目的详细设计和相关规定，当AI生成代码需要参考。
+[项目文档](DOCUMENT.md) 中描述了项目的详细设计和相关规定，当AI生成代码需要参考。
 
 ## 项目模块
 
@@ -24,51 +24,56 @@ DevSpace
 
 - Spring Boot 3.x
 - Thymeleaf + Bootstrap 5.x (用于前端页面渲染)
-- Spring Security 6.x (计划使用 JWT以及身份认证和授权)
-- MyBatis, MyBatis-Plus (计划使用)
+- Spring Security 6.x (使用 JWT Cookie 进行认证和授权)
+- MyBatis, MyBatis-Plus (已使用)
 - MySQL
-- Redis (计划使用，用于存储在线用户以及计数统计)
+- Redis (已使用，用于存储在线用户)
 - RabbitMQ (计划使用，用于评论、点赞、收藏等异步处理)
-- HandlerExceptionResolver (计划使用，用于全局异常处理)
-- AOP + TraceID (已实现，用于日志记录，实现任务追踪、监控和诊断)
+- HandlerExceptionResolver + @RestControllerAdvice (已使用，用于全局异常处理)
+- AOP + TraceID (已实现，用于日志记录)
 
 ## 项目结构
 
 ```
-.
-├── pom.xml                          # 父项目的 Maven 配置
-├── api/
-│   ├── pom.xml
-│   └── src/main/java/org/jeffrey   # 公共接口或 DTO 定义位置（示例）
-├── core/
-│   ├── pom.xml
-│   └── src/main/java/org/jeffrey/core/security/SecurityConfig.java
-├── service/
-│   ├── pom.xml
+.                    # 项目根目录
+├── pom.xml          # 父Maven配置
+├── api/             # 通用接口、DTO、VO定义
+│   └── src/main/java/org/jeffrey/api/
+│       ├── dto/         # 数据传输对象 (请求体)
+│       ├── vo/          # 视图对象 (响应体)
+│       └── exception/   # 自定义异常
+├── core/            # 核心工具/组件
+│   └── src/main/java/org/jeffrey/core/
+│       ├── security/    # 安全相关工具 (JWTUtil, Matchers)
+│       ├── cache/       # 缓存相关 (RedisClient)
+│       ├── trace/       # 日志追踪 (AOP, Filter, Util)
+│       └── util/        # 通用工具类
+├── service/         # 业务逻辑、数据库交互
 │   └── src/main/java/org/jeffrey/service/
-│       ├── LoginService.java
-│       ├── ServiceAutoConfig.java
-│       └── user/
-│           ├── repository/entity/UserDO.java
-│           ├── repository/mapper/UserMapper.java
-│           └── service/
-│               ├── UserService.java
-│               └── impl/UserServiceImpl.java
-├── ui/
-│   ├── pom.xml
+│       ├── security/    # Spring Security 配置、过滤器、服务、处理器
+│       ├── user/        # 用户服务、仓库 (Mapper/Entity)
+│       ├── article/     # 文章服务、仓库 (Mapper/Entity)
+│       └── *.java       # 配置类 (MybatisPlusConfig, ServiceAutoConfig)
+├── ui/              # 前端资源
 │   └── src/main/resources/
-│       ├── templates/index.html         # Thymeleaf 模板
-│       └── static/                      # 静态资源（如 CSS, 图片等）
-│           └── images/icon.png
-├── web/
-│   ├── pom.xml
-│   ├── src/main/java/org/jeffrey/web/
-│   │   ├── DevSpaceApplication.java     # 应用启动类
-│   │   ├── TestController.java          # 示例控制器
-│   │   └── home/HomeController.java     # 带 @PreAuthorize 的页面控制器
+│       ├── templates/   # Thymeleaf模板 (layout/, articles/, *.html)
+│       └── static/      # 静态资源 (js/, css/, images/)
+├── web/             # Web入口、控制器、全局异常处理
+│   └── src/main/java/org/jeffrey/web/
+│       ├── login/       # 认证控制器 (AuthController)
+│       ├── article/     # 文章控制器 (ArticleController, ArticleRestController)
+│       ├── user/        # 用户相关控制器 (ProfileController)
+│       ├── home/        # 首页控制器
+│       ├── exception/   # 全局异常处理器 (GlobalExceptionHandler)
+│       └── DevSpaceApplication.java # Spring Boot启动类
 │   └── src/main/resources/
-│       ├── application.yml              # 核心配置文件
-│       └── logback-spring.xml           # 日志配置
+│       ├── application.yml # 主配置文件
+│       ├── application-dal.yml # 数据访问层配置
+│       ├── init.sql        # 数据库初始化脚本
+│       └── logback.xml     # 日志配置
+├── logs/            # 日志文件目录 (运行时生成)
+├── DOCUMENT.md      # 项目详细设计文档
+└── README.md        # 本文件
 ```
 
 # 2. 如何开始 (Getting Started)
@@ -231,7 +236,7 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
 
 ## 3.3 用户认证与注册
 
-DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 和 JWT 令牌进行安全认证。
+DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 和 JWT (JSON Web Tokens)。JWT 现在通过安全的 HTTP-only Cookie 进行传输。
 
 ### 已实现功能
 
@@ -244,7 +249,8 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
 
 2. **用户认证**
     - 用户登录表单 (`/login`)
-    - JWT 令牌生成与验证
+    - **JWT 令牌生成与 Cookie 设置**: 成功登录后，服务器生成 JWT 并将其设置在一个 HTTP-only Cookie (`jwt_token`) 中。这提高了安全性，因为客户端 JavaScript 无法直接访问令牌。
+    - **Cookie 验证**: 后续请求通过 `JWTAuthenticationFilter` 自动验证 Cookie 中的 JWT。
     - 认证失败处理 (`GlobalExceptionHandler` 和 `CustomAuthenticationEntryPoint`)
     - 安全路由保护 (`SecurityConfig`)
     - 页面访问未登录重定向: 直接访问需要登录的页面时，`CustomAuthenticationEntryPoint` 会自动重定向到 `/login` 并附带原始URL作为 `redirect` 参数。
@@ -256,7 +262,7 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
     - Thymeleaf 模板引擎渲染的注册和登录页面
     - Bootstrap 5.3 提供的样式和布局
     - 客户端 JavaScript 验证
-    - **强制使用 `AuthUtils.authenticatedFetch`**: 替代原生 `fetch` 发送所有需要认证的 AJAX 请求。
+    - **使用 `AuthUtils.authenticatedFetch`**: 自动包含 `credentials: 'include'` 选项，确保浏览器随请求发送 `jwt_token` Cookie。
 
 2. **后端实现**:
     - `AuthController` 处理认证和注册请求
@@ -276,18 +282,17 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
 
 为确保API请求的安全性和一致性，DevSpace遵循以下前端请求规范：
 
-1.  **强制使用 `AuthUtils.authenticatedFetch`**: 所有需要认证的API请求**必须**使用`AuthUtils.authenticatedFetch(url, options)`而非原生`fetch`。此函数会自动处理：
-    *   添加 `Authorization: Bearer <token>` 请求头。
-    *   调用 `fetch` 并解析响应为 JSON (`.then(res => res.json())`)。
+1.  **强制使用 `AuthUtils.authenticatedFetch`**: 所有需要认证的API请求**必须**使用`AuthUtils.authenticatedFetch(url, options)`。此函数会自动：
+    *   设置 `credentials: 'include'`，指示浏览器发送 Cookie（包括 `jwt_token`）。
+    *   调用 `fetch` 并解析响应为 JSON。
     *   调用 `AuthUtils.handleApiResponse(jsonData)` 进行初步处理：
-        *   如果响应状态码为 `100_403_003` (未登录), 它会自动保存当前 URL 到 `localStorage` 并重定向到 `/login` 页面，然后 `reject` Promise。
-        *   如果响应状态码为其他错误码, 它会 `reject` Promise 并附带错误信息。
-        *   如果响应成功 (状态码为 0), 它会返回**完整的原始 JSON 响应对象** (包含 `status` 和 `result` 属性)。
+        *   处理未登录 (`100_403_003`) 和其他 API 错误。
+        *   成功时返回完整的原始 JSON 响应对象。
 
-2.  **处理 `authenticatedFetch` 的结果**: 由于 `authenticatedFetch` 内部已经解析了 JSON 并处理了通用错误 (如未登录重定向)，你的 `.then()` 回调函数将直接收到**完整的 JSON 响应对象**。你需要从中提取 `result` 部分来获取业务数据。**不要**再次调用 `.json()`。
+2.  **处理 `authenticatedFetch` 的结果**: 你的 `.then()` 回调函数将直接收到**完整的 JSON 响应对象**。你需要从中提取 `result` 部分来获取业务数据。**不要**再次调用 `.json()`。
 
     ```javascript
-    // 正确使用 authenticatedFetch
+    // 正确使用 authenticatedFetch (JWT 通过 Cookie 自动发送)
     AuthUtils.authenticatedFetch('/api/user/profile')
       .then(response => {
         // 'response' 是完整的 JSON 对象, 例如 { status: { code: 0, msg: 'OK' }, result: { username: '...', ... } }
@@ -297,20 +302,20 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
             console.log(userData.username);
             renderUserProfile(userData);
         } else {
-            // 理论上非 0 code 应该在 handleApiResponse 中被 reject，但可以加一层防护
             console.error("获取用户信息失败:", response.status.msg);
             showError(response.status.msg);
         }
       })
       .catch(error => {
-        // 处理特定于此调用的错误，或显示通用错误信息
-        // 注意：未登录错误已经被 handleApiResponse 处理并重定向，一般不会在这里捕获到
+        // 处理由 handleApiResponse 或 fetch 本身抛出的错误
         console.error("获取用户信息失败:", error.message);
         showError(error.message);
       });
     ```
 
 3.  **统一错误处理**: 在 `.catch()` 块中处理特定于该 API 调用的错误。通用错误（如未登录）已由 `authenticatedFetch` 内部处理。
+
+4.  **用户信息存储**: 用户信息（如用户名、ID）在登录成功后存储在 `localStorage` 中（通过 `AuthUtils.setUserInfo`)，用于 UI 显示。JWT 令牌本身**不再**存储在 `localStorage`。
 
 - **UI 模板**:
     - `ui/src/main/resources/templates/register.html` - 注册表单

@@ -5,6 +5,7 @@ import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 @Slf4j
 @Component
@@ -29,6 +31,9 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
     private final CustomUserDetailsService customUserDetailsService;
     private final RequestMatcher publicEndpointsMatcher;
     private final OnlineUserService onlineUserService;
+    
+    // Cookie name for JWT token
+    private static final String JWT_COOKIE_NAME = "jwt_token";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -44,22 +49,18 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         log.trace("Request does not match public path: {}, proceeding with JWT check.", request.getServletPath());
 
         // 2. 如果不是公共路径，执行 JWT 认证逻辑
-        // 获取Authorization请求头中的信息
-        final String bearerToken = request.getHeader("Authorization");
+        // 从Cookie中提取JWT令牌
+        String token = extractTokenFromCookies(request);
 
-        // 判断Token是否非法
-        if (bearerToken == null || !bearerToken.startsWith("Bearer ") ) {
-            log.warn(
-                    "Authorization header is missing, invalid, or does not contain Bearer token for path: {}, token is {}",
-                    request.getServletPath(), bearerToken
-            );
+        
+        // 判断Token是否存在
+        if (token == null) {
+            log.warn("JWT cookie is missing or invalid for path: {}", request.getServletPath());
             // 对于非公共路径，没有有效 Token 通常意味着认证失败，让后续流程处理（可能由 ExceptionTranslationFilter 触发 AuthenticationEntryPoint）
             // throw new InsufficientAuthenticationException("没有发现Token，或者Token非法: " + bearerToken);
             filterChain.doFilter(request, response);
             return;
         }
-
-        final String token = bearerToken.substring(7);     // 去掉token前缀"Bearer "，拿到真实token
 
         if (!token.isBlank()) {
             try {
@@ -99,5 +100,23 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
-
+    
+    /**
+     * 从请求的Cookie中提取JWT令牌
+     * 
+     * @param request HTTP请求
+     * @return JWT令牌，如果不存在则返回null
+     */
+    private String extractTokenFromCookies(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        
+        return Arrays.stream(cookies)
+                .filter(cookie -> JWT_COOKIE_NAME.equals(cookie.getName()))
+                .map(Cookie::getValue)
+                .findFirst()
+                .orElse(null);
+    }
 }

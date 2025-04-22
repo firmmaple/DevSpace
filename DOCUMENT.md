@@ -5,6 +5,7 @@
 # 1. 前后端数据传输
 
 DevSpace采用统一的数据传输模型，确保API响应格式一致性和可预测性，便于前端处理各种请求结果。
+JWT (JSON Web Token) 通过 HTTP-only Cookie 进行传输和验证。
 
 ## 核心组件
 
@@ -61,18 +62,35 @@ public class Status {
 - 5xx: 服务器错误(内部异常等)
 ```
 
+### JWT 认证与 Cookie
+
+- **存储**: 认证成功后，服务器生成 JWT 并将其设置在名为 `jwt_token` 的 HTTP-only Cookie 中。HttpOnly 属性可防止客户端 JavaScript 访问令牌，增强安全性。
+- **传输**: 浏览器会自动将此 Cookie 附加到后续对同一域的请求中。
+- **验证**: 服务器端的 `JWTAuthenticationFilter` 负责从请求 Cookie 中提取并验证 JWT。
+
 ## 使用示例
 
-### 成功响应
+### 成功响应 (登录)
 
 ```java
-// 返回带数据的成功响应
-User user = userService.getUserById(userId);
-return ResVo.ok(user);
+// AuthController.java - 登录成功
+// ...认证逻辑...
+String token = jwtUtil.generateToken(userDetails);
+onlineUserService.save(userDetails.getUsername(), token);
 
-// 返回无数据的成功响应(仅操作状态)
-userService.updatePassword(userId, newPassword);
-return ResVo.ok();
+// 设置 JWT Cookie
+Cookie jwtCookie = new Cookie("jwt_token", token);
+jwtCookie.setHttpOnly(true);
+jwtCookie.setPath("/");
+jwtCookie.setMaxAge(86400); // 1 day
+// jwtCookie.setSecure(true); // 生产环境建议启用
+response.addCookie(jwtCookie);
+
+// 返回用户信息，不直接返回 token
+UserDTO userDTO = userDetails.toUserDTO();
+Map<String, Object> authInfo = new HashMap<>();
+authInfo.put("user", userDTO);
+return ResVo.ok(authInfo);
 ```
 
 ### 错误响应
@@ -89,43 +107,30 @@ if (!passwordEncoder.matches(password, user.getPassword())) {
 }
 ```
 
-### 前端处理
-
-```javascript
-// 发送请求并处理统一响应
-fetch('/api/user/profile')
-  .then(response => response.json())
-  .then(data => {
-    if (data.status.code === 0) {
-      // 处理成功响应
-      renderUserProfile(data.result);
-    } else {
-      // 处理错误
-      showError(data.status.msg);
-    }
-  });
-```
-
 ### 前端使用 authenticatedFetch
 
-为确保所有API请求都包含JWT认证令牌，应使用`AuthUtils.authenticatedFetch`方法替代原生`fetch`：
+前端应使用 `AuthUtils.authenticatedFetch` 发送需要认证的请求。该方法确保请求包含必要的 `credentials` 选项，以便浏览器发送 `jwt_token` Cookie。
 
 ```javascript
-// 使用authenticatedFetch自动添加JWT令牌
-AuthUtils.authenticatedFetch('/api/user/profile')
-  .then(response => response.json())
-  .then(data => {
-    if (data.status.code === 0) {
+// 使用 authenticatedFetch (JWT 通过 Cookie 自动发送)
+AuthUtils.authenticatedFetch('/api/user/profile', { method: 'GET' })
+  .then(response => { // 'response' 是完整的 ResVo 对象
+    if (response.status.code === 0) {
       // 处理成功响应
-      renderUserProfile(data.result);
+      const userData = response.result;
+      renderUserProfile(userData);
     } else {
       // 处理错误
-      showError(data.status.msg);
+      showError(response.status.msg);
     }
+  })
+  .catch(error => {
+      console.error("请求失败:", error.message);
+      showError(error.message);
   });
 ```
 
-默认情况下，所有需要认证的API都应使用`authenticatedFetch`方法发送请求，这样可以确保请求头中包含有效的JWT令牌。
+客户端 JavaScript **不需要也无法**直接管理 `jwt_token` Cookie。浏览器和服务器负责其传输和验证。
 
 ## 错误码示例
 
@@ -202,8 +207,12 @@ public class ArticleSummaryVO implements Serializable { // For list view
         - Request Body: `RegisterDTO`
         - Response: `ResVo<Void>`
     - `POST /auth/login`: 用户登录
-        - Request Body: `LoginDTO` (需要定义)
-        - Response: `ResVo<LoginSuccessVO>` (包含 JWT Token)
+        - Request Body: `LoginDTO` (Form parameters: username, password)
+        - Response: `ResVo<Map<String, Object>>` (包含 `user` DTO)
+        - **Side Effect**: Sets `jwt_token` HttpOnly Cookie.
+    - `POST /auth/logout`: 用户登出
+        - Response: `ResVo<String>`
+        - **Side Effect**: Clears `jwt_token` Cookie.
 ## 3.2 用户接口 (`/api/user`)
 ## 3.3 文章接口 (`/api/articles`)
     - `GET /api/articles`: 获取文章列表
@@ -287,18 +296,4 @@ public class ArticleSummaryVO implements Serializable { // For list view
 - **文章收藏表 (`t_article_collect`)**
     - `id` (BIGINT, PK)
     - `article_id` (BIGINT, FK) - 文章ID
-    - `user_id` (BIGINT, FK) - 用户ID
-    - `create_time` (DATETIME) - 收藏时间
-
-- **评论表 (`t_comment`)**
-    - ...
-
-# 5. 编码规范
-
-*(定义项目的编码风格、命名约定、注释规范等。)*
-
-- **Java 编码规范**: (例如，遵循 Google Java Style Guide 或 Alibaba Java Coding Guidelines)
-- **命名约定**: 类名、方法名、变量名、常量名、包名等。
-- **注释规范**: 类注释、方法注释、行内注释。
-- **代码格式化**: (例如，使用 Prettier 或 IDE 的格式化配置)
-- **日志规范**: 日志级别使用、日志内容格式。
+    - `user_id`

@@ -3,34 +3,8 @@
  */
 const AuthUtils = {
     /**
-     * Store the JWT token in localStorage
-     * @param {string} token - JWT token to store
-     */
-    setToken: function(token) {
-        console.log("AuthUtils: Setting token", token ? "Token exists" : "No token");
-        localStorage.setItem('jwt_token', token);
-    },
-
-    /**
-     * Get the JWT token from localStorage
-     * @returns {string|null} The JWT token or null if not found
-     */
-    getToken: function() {
-        const token = localStorage.getItem('jwt_token');
-        return token;
-    },
-
-    /**
-     * Remove the JWT token from localStorage
-     */
-    removeToken: function() {
-        console.log("AuthUtils: Removing tokens");
-        localStorage.removeItem('jwt_token');
-        localStorage.removeItem('user_info');
-    },
-
-    /**
-     * Store the user info in localStorage
+     * Store user info in localStorage.
+     * Note: JWT token is now stored in HTTP-only cookie by the server.
      * @param {Object} userInfo - User information object
      */
     setUserInfo: function(userInfo) {
@@ -54,28 +28,19 @@ const AuthUtils = {
     },
 
     /**
-     * Check if the user is authenticated (has a token)
-     * @returns {boolean} True if authenticated, false otherwise
+     * Remove user info from localStorage
      */
-    isAuthenticated: function() {
-        return !!this.getToken();
+    removeUserInfo: function() {
+        console.log("AuthUtils: Removing user info");
+        localStorage.removeItem('user_info');
     },
 
     /**
-     * Add the JWT token to fetch request options
-     * @param {Object} options - Fetch request options
-     * @returns {Object} Updated options with Authorization header
+     * Check if the user is authenticated by checking if user info exists
+     * @returns {boolean} True if authenticated, false otherwise
      */
-    addTokenToRequest: function(options = {}) {
-        const token = this.getToken();
-        if (!token) return options;
-        
-        if (!options.headers) {
-            options.headers = {};
-        }
-        console.log("AuthUtils: Adding token to request", token);
-        options.headers['Authorization'] = `Bearer ${token}`;
-        return options;
+    isAuthenticated: function() {
+        return !!this.getUserInfo();
     },
 
     /**
@@ -103,13 +68,19 @@ const AuthUtils = {
     },
 
     /**
-     * Wrapper for fetch that automatically adds the JWT token
+     * Wrapper for fetch that uses cookies for authentication
+     * Note: JWT token is automatically sent in cookies for authenticated requests
      * @param {string} url - The URL to fetch
      * @param {Object} options - Fetch request options
      * @returns {Promise} Fetch promise
      */
     authenticatedFetch: function(url, options = {}) {
-        const requestOptions = this.addTokenToRequest(options);
+        // Make sure to include credentials to send cookies
+        const requestOptions = {
+            ...options,
+            credentials: 'include'  // This ensures cookies are sent with the request
+        };
+        
         return fetch(url, requestOptions)
             .then(res => res.json())
             .then(this.handleApiResponse);
@@ -122,13 +93,11 @@ const AuthUtils = {
         // Call the logout endpoint
         fetch('/auth/logout', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.getToken()}`
-            }
+            credentials: 'include'  // Include cookies in the request
         })
         .finally(() => {
-            // Remove token and redirect regardless of server response
-            this.removeToken();
+            // Remove user info and redirect regardless of server response
+            this.removeUserInfo();
             window.location.href = '/';
         });
     },
@@ -139,10 +108,6 @@ const AuthUtils = {
      */
     init: function() {
         try {
-            // Check if token exists
-            const token = this.getToken();
-            if (!token) return false;
-            
             // Check if user info exists and has minimum required fields
             const userInfo = this.getUserInfo();
             if (!userInfo || !userInfo.username) return false;

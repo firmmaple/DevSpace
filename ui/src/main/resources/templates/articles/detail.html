@@ -263,7 +263,6 @@
                 // Load article details
                 function loadArticle() {
                     AuthUtils.authenticatedFetch(`/api/articles/${articleId}`)
-                        .then(response => response.json())
                         .then(data => {
                             articleLoading.classList.add('d-none');
                             
@@ -372,13 +371,12 @@
                     }
                     
                     const method = isLiked ? 'DELETE' : 'POST';
-                    fetch(`/api/articles/${articleId}/like`, {
+                    AuthUtils.authenticatedFetch(`/api/articles/${articleId}/like`, {
                         method: method,
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
                         }
                     })
-                    .then(response => response.json())
                     .then(data => {
                         if (data.status.code === 0) {
                             isLiked = !isLiked;
@@ -401,13 +399,12 @@
                     }
                     
                     const method = isCollected ? 'DELETE' : 'POST';
-                    fetch(`/api/articles/${articleId}/collect`, {
+                    AuthUtils.authenticatedFetch(`/api/articles/${articleId}/collect`, {
                         method: method,
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
                         }
                     })
-                    .then(response => response.json())
                     .then(data => {
                         if (data.status.code === 0) {
                             isCollected = !isCollected;
@@ -430,7 +427,7 @@
                         const commentContent = document.getElementById('comment-content').value.trim();
                         if (!commentContent) return;
                         
-                        fetch(`/api/articles/${articleId}/comments`, {
+                        AuthUtils.authenticatedFetch(`/api/articles/${articleId}/comments`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -440,7 +437,6 @@
                                 content: commentContent
                             })
                         })
-                        .then(response => response.json())
                         .then(data => {
                             if (data.status.code === 0) {
                                 // Clear form
@@ -462,13 +458,12 @@
                 
                 // Handle confirm delete
                 confirmDeleteButton.addEventListener('click', function() {
-                    fetch(`/api/articles/${articleId}`, {
+                    AuthUtils.authenticatedFetch(`/api/articles/${articleId}`, {
                         method: 'DELETE',
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
                         }
                     })
-                    .then(response => response.json())
                     .then(data => {
                         if (data.status.code === 0) {
                             // Redirect to articles list
