@@ -79,6 +79,30 @@ const AuthUtils = {
     },
 
     /**
+     * Handle API response
+     * @param {Object} response - API response
+     * @returns {Promise} Fetch promise
+     */
+    handleApiResponse: function(response) {
+        // 检查状态码
+        if (response.status && response.status.code !== 0) {
+            // 未登录错误码 (100_403_003)
+          if (response.status.code === 100403003) {
+            // 保存当前页面 URL，以便登录后返回
+            localStorage.setItem('redirectUrl', window.location.href);
+            // 重定向到登录页
+            window.location.href = '/login';
+            return Promise.reject(new Error('用户未登录'));
+          }
+          
+          // 其他错误处理
+          return Promise.reject(new Error(response.status.msg));
+        }
+        
+        return response;
+    },
+
+    /**
      * Wrapper for fetch that automatically adds the JWT token
      * @param {string} url - The URL to fetch
      * @param {Object} options - Fetch request options
@@ -86,7 +110,9 @@ const AuthUtils = {
      */
     authenticatedFetch: function(url, options = {}) {
         const requestOptions = this.addTokenToRequest(options);
-        return fetch(url, requestOptions);
+        return fetch(url, requestOptions)
+            .then(res => res.json())
+            .then(this.handleApiResponse);
     },
 
     /**

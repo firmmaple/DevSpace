@@ -96,8 +96,8 @@ public class TraceLogAspect {
             return result;
         } catch (Throwable throwable) {
             // 记录异常日志
-            log.error("执行异常 - {}.{} - 异常: {}",
-                    className, methodName, throwable.getMessage(), throwable);
+            // log.error("执行异常 - {}.{} - 异常: {}",
+            //      className, methodName, throwable.getMessage(), throwable);
             throw throwable;
         } finally {
             // 执行时间

@@ -175,8 +175,7 @@
                             .catch(handleFetchError);
                     } else {
                         // Fetch articles from API with authentication
-                        AuthUtils.authenticatedFetch(url, {})
-                            .then(response => response.json())
+                        AuthUtils.authenticatedFetch(url)
                             .then(handleArticlesResponse)
                             .catch(handleFetchError);
                     }

@@ -24,6 +24,8 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 public class SecurityConfig {
     private final JWTAuthenticationFilter jwtAuthenticationFilter;
     private final RequestMatcher publicEndpointsMatcher;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     // No explicit UserDetailsService needed here if UserServiceImpl implements it and is a @Service
 
 
@@ -56,7 +58,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(publicEndpointsMatcher).permitAll()
                         // Require authentication for any other request
-                        .anyRequest().permitAll())
+                        .anyRequest().authenticated())
 //                        .anyRequest().authenticated())
 //                .formLogin(form -> form
 //                        // Specify the custom login page URL
@@ -79,6 +81,11 @@ public class SecurityConfig {
                 // Disable CSRF for simplicity in this example, consider enabling it with proper token handling in production
                 .csrf(AbstractHttpConfigurer::disable)
                 .addFilterAfter(jwtAuthenticationFilter, ExceptionTranslationFilter.class)
+                .exceptionHandling(
+                        httpSecurityExceptionHandlingConfigurer ->
+                        httpSecurityExceptionHandlingConfigurer
+                                .authenticationEntryPoint(customAuthenticationEntryPoint)
+                                .accessDeniedHandler(customAccessDeniedHandler));
         ;
 
         return http.build();

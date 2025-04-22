@@ -32,7 +32,7 @@ public class SecurityMatchersConfig {
             new AntPathRequestMatcher("/doc.html"), // Knife4j
             // 其他需要公开访问的路径
             new AntPathRequestMatcher("/articles", HttpMethod.GET.name()),
-            new AntPathRequestMatcher("/articles/**", HttpMethod.GET.name()),
+            // new AntPathRequestMatcher("/articles/**", HttpMethod.GET.name()),
             new AntPathRequestMatcher("/api/articles/**", HttpMethod.GET.name())
             // ... 添加更多公共路径规则 ...
     );

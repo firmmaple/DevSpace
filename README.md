@@ -245,8 +245,10 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
 2. **用户认证**
     - 用户登录表单 (`/login`)
     - JWT 令牌生成与验证
-    - 认证失败处理
-    - 安全路由保护
+    - 认证失败处理 (`GlobalExceptionHandler` 和 `CustomAuthenticationEntryPoint`)
+    - 安全路由保护 (`SecurityConfig`)
+    - 页面访问未登录重定向: 直接访问需要登录的页面时，`CustomAuthenticationEntryPoint` 会自动重定向到 `/login` 并附带原始URL作为 `redirect` 参数。
+    - API访问未登录处理: 请求需要认证的 API 时，如果未提供有效 Token，`CustomAuthenticationEntryPoint` 会委托 `GlobalExceptionHandler` 返回 `StatusEnum.FORBID_NOTLOGIN` (100_403_003) 的 JSON 响应。
 
 ### 技术实现
 
@@ -254,7 +256,7 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
     - Thymeleaf 模板引擎渲染的注册和登录页面
     - Bootstrap 5.3 提供的样式和布局
     - 客户端 JavaScript 验证
-    - 使用 `AuthUtils.authenticatedFetch` 替代原生 fetch 发送 AJAX 请求，自动添加 JWT 令牌
+    - **强制使用 `AuthUtils.authenticatedFetch`**: 替代原生 `fetch` 发送所有需要认证的 AJAX 请求。
 
 2. **后端实现**:
     - `AuthController` 处理认证和注册请求
@@ -262,6 +264,8 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
     - Spring Security 配置在 `SecurityConfig` 中设置
     - 使用 `PasswordEncoder` 进行密码加密
     - JWT 认证过滤器 `JWTAuthenticationFilter`
+    - **认证入口点 `CustomAuthenticationEntryPoint`**: 区分页面请求（重定向到登录页）和 API 请求（返回 JSON 错误）。
+    - **全局异常处理器 `GlobalExceptionHandler`**: 统一处理包括认证/授权在内的各种 API 异常。
 
 3. **数据模型**:
     - `UserDO` 实体类映射到数据库
@@ -272,27 +276,41 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
 
 为确保API请求的安全性和一致性，DevSpace遵循以下前端请求规范：
 
-1. **使用authenticatedFetch**: 所有API请求应使用`AuthUtils.authenticatedFetch`而非原生`fetch`，确保请求头中包含JWT令牌
-   ```javascript
-   // 错误: 直接使用原生fetch
-   fetch('/api/articles');
-   
-   // 正确: 使用authenticatedFetch
-   AuthUtils.authenticatedFetch('/api/articles');
-   ```
+1.  **强制使用 `AuthUtils.authenticatedFetch`**: 所有需要认证的API请求**必须**使用`AuthUtils.authenticatedFetch(url, options)`而非原生`fetch`。此函数会自动处理：
+    *   添加 `Authorization: Bearer <token>` 请求头。
+    *   调用 `fetch` 并解析响应为 JSON (`.then(res => res.json())`)。
+    *   调用 `AuthUtils.handleApiResponse(jsonData)` 进行初步处理：
+        *   如果响应状态码为 `100_403_003` (未登录), 它会自动保存当前 URL 到 `localStorage` 并重定向到 `/login` 页面，然后 `reject` Promise。
+        *   如果响应状态码为其他错误码, 它会 `reject` Promise 并附带错误信息。
+        *   如果响应成功 (状态码为 0), 它会返回**完整的原始 JSON 响应对象** (包含 `status` 和 `result` 属性)。
 
-2. **统一错误处理**: 所有请求应检查响应状态码并进行统一处理
-   ```javascript
-   AuthUtils.authenticatedFetch('/api/data')
-     .then(response => response.json())
-     .then(data => {
-       if (data.status.code === 0) {
-         // 成功处理
-       } else {
-         // 错误处理
-       }
-     });
-   ```
+2.  **处理 `authenticatedFetch` 的结果**: 由于 `authenticatedFetch` 内部已经解析了 JSON 并处理了通用错误 (如未登录重定向)，你的 `.then()` 回调函数将直接收到**完整的 JSON 响应对象**。你需要从中提取 `result` 部分来获取业务数据。**不要**再次调用 `.json()`。
+
+    ```javascript
+    // 正确使用 authenticatedFetch
+    AuthUtils.authenticatedFetch('/api/user/profile')
+      .then(response => {
+        // 'response' 是完整的 JSON 对象, 例如 { status: { code: 0, msg: 'OK' }, result: { username: '...', ... } }
+        // 不需要再调用 response.json()
+        if (response.status.code === 0) {
+            const userData = response.result;
+            console.log(userData.username);
+            renderUserProfile(userData);
+        } else {
+            // 理论上非 0 code 应该在 handleApiResponse 中被 reject，但可以加一层防护
+            console.error("获取用户信息失败:", response.status.msg);
+            showError(response.status.msg);
+        }
+      })
+      .catch(error => {
+        // 处理特定于此调用的错误，或显示通用错误信息
+        // 注意：未登录错误已经被 handleApiResponse 处理并重定向，一般不会在这里捕获到
+        console.error("获取用户信息失败:", error.message);
+        showError(error.message);
+      });
+    ```
+
+3.  **统一错误处理**: 在 `.catch()` 块中处理特定于该 API 调用的错误。通用错误（如未登录）已由 `authenticatedFetch` 内部处理。
 
 - **UI 模板**:
     - `ui/src/main/resources/templates/register.html` - 注册表单
@@ -384,6 +402,65 @@ public String index(Model model) {
 
     return "layout/main"; // 使用主布局作为视图
 }
+```
+
+## 3.5 全局异常处理系统
+
+DevSpace 实现了一个基于 `@RestControllerAdvice` 的全局异常处理系统，用于统一处理 Web 层（特别是 REST API）抛出的异常，并返回标准化的 `ResVo` 响应。
+
+### 核心组件
+
+1.  **`GlobalExceptionHandler`**: 
+    *   位于 `web/src/main/java/org/jeffrey/web/exception/GlobalExceptionHandler.java`。
+    *   使用 `@RestControllerAdvice` 注解，自动拦截 Controller 层抛出的异常。
+    *   为不同类型的异常（如 `ConstraintViolationException`, `MethodArgumentNotValidException`, `BindException`, `AccessDeniedException`, `AuthenticationException`, 以及通用的 `Exception`）定义了 `@ExceptionHandler` 方法。
+    *   所有处理器方法都返回 `ResVo<String>` 对象，包含来自 `StatusEnum` 的标准错误码和消息。
+    *   记录带有 TraceID 的错误日志。
+
+2.  **`CustomAuthenticationEntryPoint` 交互**: 
+    *   对于需要认证的 API 请求，如果认证失败 (`AuthenticationException`)，`CustomAuthenticationEntryPoint` 会将异常委托给 `GlobalExceptionHandler` 处理，最终返回 `FORBID_NOTLOGIN` 的 JSON 响应。
+
+### 工作流程
+
+1.  当 Controller 中的方法（或 Spring Security 过滤器链中的认证/授权环节）抛出异常时。
+2.  如果异常是 `AuthenticationException` 且请求是 API 请求，`CustomAuthenticationEntryPoint` 将其交给 `GlobalExceptionHandler`。
+3.  `GlobalExceptionHandler` 中匹配的 `@ExceptionHandler` 方法被触发。
+4.  该方法构造一个包含相应 `StatusEnum` 错误码的 `ResVo` 对象。
+5.  将 `ResVo` 对象序列化为 JSON 并返回给客户端。
+
+### 使用示例
+
+在 Service 层抛出业务异常：
+```java
+@Service
+public class UserServiceImpl implements UserService {
+    @Override
+    public User getUserById(Long id) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            // 抛出业务异常，会被 GlobalExceptionHandler 捕获
+            throw new BusinessException(StatusEnum.USER_NOT_EXISTS, id);
+        }
+        return user;
+    }
+}
+```
+
+前端通过 `authenticatedFetch` 接收并处理：
+```javascript
+AuthUtils.authenticatedFetch('/api/users/' + userId)
+  .then(response => { 
+    // response 是完整的 ResVo 对象 
+    if (response.status.code === 0) {
+       const userData = response.result;
+       // 使用 userData
+    }
+  })
+  .catch(error => { 
+    // 处理特定于此调用的错误，或显示通用错误信息
+    console.error("获取用户信息失败:", error.message);
+    showError(error.message);
+  });
 ```
 
 

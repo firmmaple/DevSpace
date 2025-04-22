@@ -36,7 +36,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
         // 1. 首先检查请求是否匹配公共路径
         if (publicEndpointsMatcher.matches(request)) {
-            log.trace("Request matches public path: {}, skipping JWT Authentication.", request.getServletPath());
+            log.info("Request matches public path: {}, skipping JWT Authentication.", request.getServletPath());
             filterChain.doFilter(request, response); // 直接交给下一个过滤器
             return; // 结束当前过滤器的执行
         }
