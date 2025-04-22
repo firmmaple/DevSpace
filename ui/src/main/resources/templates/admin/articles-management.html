@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div th:fragment="content" class="container">
+        <!-- Admin Content Header -->
+        <div class="row my-4">
+            <div class="col">
+                <h2>管理后台 - 文章管理</h2>
+                <div class="btn-group mt-3" role="group" aria-label="Admin Sections">
+                    <a th:href="@{/admin/users}" class="btn btn-outline-primary">用户管理</a>
+                    <a th:href="@{/admin/articles}" class="btn btn-primary">文章管理</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Articles Table Section -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-transparent">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="mb-0">文章列表</h5>
+                    </div>
+                    <div class="col-auto">
+                        <span class="badge bg-primary" th:text="${articles.size()} + ' 篇文章'">0 篇文章</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">标题</th>
+                                <th scope="col">作者</th>
+                                <th scope="col">状态</th>
+                                <th scope="col">创建日期</th>
+                                <th scope="col">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="article : ${articles}">
+                                <td th:text="${article.id}">1</td>
+                                <td>
+                                    <a th:href="@{/articles/{id}(id=${article.id})}" th:text="${article.title}">文章标题</a>
+                                </td>
+                                <td th:text="${article.authorUsername}">作者</td>
+                                <td>
+                                    <span th:if="${article.status == 1}" class="badge bg-success">已发布</span>
+                                    <span th:if="${article.status == 0}" class="badge bg-warning">草稿</span>
+                                    <span th:if="${article.status == 2}" class="badge bg-danger">已删除</span>
+                                </td>
+                                <td th:text="${#temporals.format(article.createdAt, 'yyyy-MM-dd HH:mm')}">2023-10-01</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a th:href="@{/articles/{id}(id=${article.id})}" class="btn btn-outline-primary">查看</a>
+                                        <button type="button" class="btn btn-outline-danger">删除</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:if="${articles.empty}">
+                                <td colspan="6" class="text-center">暂无文章数据</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript for this page -->
+    <th:block th:fragment="scripts">
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log("Admin articles page loaded");
+            });
+        </script>
+    </th:block>
+</body>
+</html> 

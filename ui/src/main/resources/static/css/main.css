@@ -80,11 +80,39 @@
     box-shadow: 0 4px 8px rgba(74, 108, 247, 0.2);
 }
 
-/* 添加显示/隐藏元素的高优先级类 */
+/* General styles */
+body {
+    font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    color: #333;
+}
+
+/* Force show/hide utilities for auth UI */
 .force-show {
     display: flex !important;
 }
 
 .force-hide {
     display: none !important;
+}
+
+/* Admin link styling */
+.admin-link a {
+    font-weight: bold;
+    color: #dc3545; /* Red color to make admin link stand out */
+}
+
+.admin-link a:hover {
+    color: #a71d2a;
+}
+
+/* Admin tables */
+.admin-table .badge {
+    font-size: 85%;
+}
+
+/* Table responsive fixes */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 } 

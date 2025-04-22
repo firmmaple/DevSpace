@@ -16,10 +16,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.ExceptionTranslationFilter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 @Slf4j
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor // Add constructor injection
 public class SecurityConfig {
     private final JWTAuthenticationFilter jwtAuthenticationFilter;
@@ -57,6 +59,8 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(publicEndpointsMatcher).permitAll()
+                        // Admin-only endpoints
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         // Require authentication for any other request
                         .anyRequest().authenticated())
 //                        .anyRequest().authenticated())

@@ -82,7 +82,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
                 // Principal principal = CustomUserDetails()
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
                 UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, new ArrayList<>()); // 使用空权限列表
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()); // 使用空权限列表
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
             } catch (MalformedJwtException e) {
                 throw new InsufficientAuthenticationException("Token被篡改");

@@ -468,6 +468,40 @@ AuthUtils.authenticatedFetch('/api/users/' + userId)
   });
 ```
 
+## 3.6 管理后台 (Admin Management)
+
+DevSpace 包含一个管理后台，仅限具有 `ROLE_ADMIN` 角色的用户访问。
+
+### 功能
+
+1.  **用户管理**: 
+    *   查看所有注册用户的列表 (`/admin/users`)。
+    *   显示用户的 ID、用户名和是否为管理员。
+2.  **文章管理**:
+    *   查看所有文章的列表 (`/admin/articles`)。
+    *   显示文章的 ID、标题、作者、状态和创建日期。
+
+### 技术实现
+
+1.  **访问控制**: 
+    *   使用 Spring Security 的 `@PreAuthorize("hasRole('ADMIN')")` 注解保护 `AdminController` 中的方法。
+    *   `SecurityConfig` 配置 `/admin/**` 路径需要 `ROLE_ADMIN` 权限。
+    *   `CustomUserDetails` 根据用户的 `isAdmin` 字段授予 `ROLE_ADMIN`。
+2.  **前端**: 
+    *   管理后台的导航链接 (`/admin`) 只在用户是管理员时在页眉中显示 (通过 `header.js` 控制)。
+    *   使用 Thymeleaf 模板 (`admin/users-management.html`, `admin/articles-management.html`) 显示管理数据。
+3.  **后端**: 
+    *   `AdminController` 处理 `/admin` 路径下的请求。
+    *   `UserService` 和 `ArticleService` 提供获取用户和文章列表的数据。
+
+### 代码位置
+
+-   **控制器**: `web/src/main/java/org/jeffrey/web/admin/AdminController.java`
+-   **视图模板**: `ui/src/main/resources/templates/admin/`
+-   **安全配置**: `service/src/main/java/org/jeffrey/service/security/SecurityConfig.java`
+-   **用户详情**: `service/src/main/java/org/jeffrey/service/security/CustomUserDetails.java`
+-   **前端脚本**: `ui/src/main/resources/static/js/header.js`
+
 
 
 

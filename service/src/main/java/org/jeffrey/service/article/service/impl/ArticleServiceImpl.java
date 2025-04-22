@@ -141,6 +141,7 @@ public class ArticleServiceImpl implements ArticleService {
         summaryVO.setSummary(articleDO.getSummary());
         summaryVO.setAuthorId(articleDO.getAuthorId());
         summaryVO.setCreatedAt(articleDO.getCreatedAt());
+        summaryVO.setStatus(articleDO.getStatus());
 
         UserDO author = userService.getById(articleDO.getAuthorId());
         summaryVO.setAuthorUsername(author != null ? author.getUsername() : "Unknown");

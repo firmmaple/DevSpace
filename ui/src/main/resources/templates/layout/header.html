@@ -108,6 +108,10 @@
                         <li class="nav-item">
                             <a class="nav-link" th:classappend="${currentPage == 'tools' ? 'active' : ''}" th:href="@{/category/tools}">工具</a>
                         </li>
+                        <!-- Admin link - only shown for admin users -->
+                        <li class="nav-item admin-link force-hide" id="adminNavLink">
+                            <a class="nav-link" th:classappend="${currentPage == 'admin' ? 'active' : ''}" th:href="@{/admin}">管理后台</a>
+                        </li>
                     </ul>
                     
                     <!-- 搜索框 -->

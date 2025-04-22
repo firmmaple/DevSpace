@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const usernameElement = document.getElementById('username');
     const userInitialsElement = document.getElementById('userInitials');
     const logoutButton = document.getElementById('logoutButton');
+    const adminNavLink = document.getElementById('adminNavLink');
     
     // Debug - check if AuthUtils is loaded
     console.log("Header.js - AuthUtils available:", window.AuthUtils ? "Yes" : "No");
@@ -47,6 +48,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update username display
             if (userInfo && userInfo.username && usernameElement) {
                 usernameElement.textContent = userInfo.username;
+            }
+            
+            // Show admin link only if user is admin
+            if (userInfo && userInfo.isAdmin === true && adminNavLink) {
+                adminNavLink.classList.add('force-show');
+                adminNavLink.classList.remove('force-hide');
+                console.log("Admin link shown for admin user:", userInfo.username);
+            } else if (adminNavLink) {
+                adminNavLink.classList.add('force-hide');
+                adminNavLink.classList.remove('force-show');
             }
             
             // Update user initials avatar

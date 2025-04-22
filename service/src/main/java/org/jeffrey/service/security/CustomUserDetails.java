@@ -5,9 +5,12 @@ import lombok.Data;
 import org.jeffrey.api.dto.user.UserDTO;
 import org.jeffrey.service.user.repository.entity.UserDO;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -32,7 +35,16 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return null;
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        // Add basic user role for all users
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        
+        // Add admin role if the user has admin privileges
+        if (isAdmin) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
+        
+        return authorities;
     }
 
     @Override
