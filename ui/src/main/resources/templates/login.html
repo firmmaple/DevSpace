@@ -264,7 +264,7 @@
                             window.location.href = finalRedirect;
                         } else {
                             // Handle error
-                            showApiError(data.status ? data.status.message : '登录失败，请检查用户名和密码');
+                            showApiError(data.status ? data.status.msg : '登录失败，请检查用户名和密码');
                         }
                     })
                     .catch(error => {
