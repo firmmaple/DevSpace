@@ -17,4 +17,10 @@ public class UserDO {
     private String password;
     @TableField(value = "is_admin")
     private Boolean isAdmin;
+    @TableField(value = "email")
+    private String email;
+    @TableField(value = "avatar_url")
+    private String avatarUrl;
+    @TableField(value = "bio")
+    private String bio;
 }

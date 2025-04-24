@@ -118,6 +118,42 @@ const AuthUtils = {
             console.error("Error initializing AuthUtils:", error);
             return false;
         }
+    },
+
+    /**
+     * Update user information in localStorage after profile changes
+     * @param {Object} updatedProfile - Updated user profile information
+     */
+    updateUserInfo: function(updatedProfile) {
+        if (!updatedProfile) return;
+        
+        const currentUserInfo = this.getUserInfo();
+        if (!currentUserInfo) return;
+        
+        // 更新用户名和其他可能变更的信息
+        const newUserInfo = {
+            ...currentUserInfo,
+            username: updatedProfile.username || currentUserInfo.username,
+            email: updatedProfile.email || currentUserInfo.email,
+            bio: updatedProfile.bio || currentUserInfo.bio,
+            avatarUrl: updatedProfile.avatarUrl || currentUserInfo.avatarUrl
+        };
+        
+        this.setUserInfo(newUserInfo);
+        console.log("User info updated in localStorage", newUserInfo);
+        
+        // 触发自定义事件，通知header更新头像
+        const userInfoUpdatedEvent = new CustomEvent('userInfoUpdated', {
+            detail: { newUserInfo: newUserInfo }
+        });
+        document.dispatchEvent(userInfoUpdatedEvent);
+        
+        // 如果用户名已更改，可能需要刷新页面以更新UI
+        if (updatedProfile.username && updatedProfile.username !== currentUserInfo.username) {
+            console.log("Username changed, refreshing page to update UI");
+            // 可以选择刷新页面或只更新特定UI元素
+            // window.location.reload();
+        }
     }
 };
 
