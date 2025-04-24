@@ -5,12 +5,18 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.jeffrey.api.vo.ResVo;
+import org.jeffrey.api.vo.Status;
 import org.jeffrey.api.vo.StatusEnum;
 import org.jeffrey.core.trace.TraceUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.AccountExpiredException;
+import org.springframework.security.authentication.CredentialsExpiredException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.BindException;
@@ -140,7 +146,6 @@ public class GlobalExceptionHandler {
 
     /**
      * 处理认证异常
-     * TODO 前端添加登陆失败提示
      */
     @ExceptionHandler(AuthenticationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
@@ -148,8 +153,20 @@ public class GlobalExceptionHandler {
         log.warn("认证异常: {}", e.getMessage());
         if (e instanceof BadCredentialsException) {
             return ResVo.fail(StatusEnum.USER_PWD_ERROR);
-        }else if(e instanceof UsernameNotFoundException){
+        } else if(e instanceof UsernameNotFoundException) {
             return ResVo.fail(StatusEnum.USER_NOT_EXISTS);
+        } else if(e instanceof LockedException) {
+            return ResVo.fail(StatusEnum.LOGIN_FAILED_MIXED, "账户已被锁定");
+        } else if(e instanceof DisabledException) {
+            return ResVo.fail(StatusEnum.LOGIN_FAILED_MIXED, "账户已被禁用");
+        } else if(e instanceof AccountExpiredException) {
+            return ResVo.fail(StatusEnum.LOGIN_FAILED_MIXED, "账户已过期");
+        } else if(e instanceof CredentialsExpiredException) {
+            return ResVo.fail(StatusEnum.LOGIN_FAILED_MIXED, "凭证已过期");
+        } else if(e instanceof InsufficientAuthenticationException) {
+            if (e.getMessage() != null && e.getMessage().contains("Token")) {
+                return ResVo.fail(StatusEnum.LOGIN_FAILED_MIXED, e.getMessage());
+            }
         }
         return ResVo.fail(StatusEnum.FORBID_NOTLOGIN);
     }
