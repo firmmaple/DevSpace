@@ -133,6 +133,7 @@
                                 <span id="username">User</span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                                <li><a class="dropdown-item" th:href="@{/profile}"><i class="fas fa-user me-2"></i>个人中心</a></li>
                                 <li><a class="dropdown-item" th:href="@{/articles/create}"><i class="fas fa-edit me-2"></i>发布文章</a></li>
                                 <li><a class="dropdown-item" th:href="@{/articles?authorId=me}"><i class="fas fa-list me-2"></i>我的文章</a></li>
                                 <li><a class="dropdown-item" th:href="@{/my/favorites}"><i class="fas fa-star me-2"></i>我的收藏</a></li>

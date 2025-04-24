@@ -1,0 +1,11 @@
+-- 用户表更新脚本 - 整合头像和个人资料
+-- 添加头像URL字段（如果不存在）
+ALTER TABLE `user` ADD COLUMN IF NOT EXISTS `avatar_url` VARCHAR(255) DEFAULT NULL COMMENT '用户头像URL';
+
+-- 添加个人资料相关字段（如果不存在）
+ALTER TABLE `user` ADD COLUMN IF NOT EXISTS `email` VARCHAR(255) DEFAULT NULL COMMENT '用户邮箱';
+ALTER TABLE `user` ADD COLUMN IF NOT EXISTS `bio` TEXT DEFAULT NULL COMMENT '个人简介';
+ALTER TABLE `user` ADD COLUMN IF NOT EXISTS `join_date` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间';
+
+-- 为已有用户添加注册时间（如果为空）
+UPDATE `user` SET `join_date` = CURRENT_TIMESTAMP WHERE `join_date` IS NULL; 

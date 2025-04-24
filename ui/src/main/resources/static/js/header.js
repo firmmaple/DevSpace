@@ -60,17 +60,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 adminNavLink.classList.remove('force-show');
             }
             
-            // Update user initials avatar
-            if (userInfo && userInfo.username && userInitialsElement) {
-                // Get first letter of username for avatar
-                const initials = userInfo.username.charAt(0).toUpperCase();
-                userInitialsElement.textContent = initials;
-                
-                // Set a background color based on username (simple hash for consistent color)
-                const hash = simpleHash(userInfo.username);
-                const hue = hash % 360; // 0-359 hue value
-                userInitialsElement.style.backgroundColor = `hsl(${hue}, 70%, 60%)`;
-            }
+            // Update user avatar
+            updateUserAvatar(userInfo);
         } else {
             // User is not authenticated - show auth buttons
             if (userMenu) {
@@ -80,6 +71,44 @@ document.addEventListener('DOMContentLoaded', function() {
             if (authButtons) {
                 authButtons.classList.add('force-show');
                 authButtons.classList.remove('force-hide');
+            }
+        }
+    }
+    
+    // Update user avatar based on user info
+    function updateUserAvatar(userInfo) {
+        if (userInfo && userInitialsElement) {
+            if (userInfo.avatarUrl) {
+                // 用户有头像，显示头像图片
+                console.log("Setting user avatar:", userInfo.avatarUrl);
+                
+                // 检查是否已存在头像图片
+                let avatarImg = userInitialsElement.querySelector('img');
+                if (!avatarImg) {
+                    // 创建新的img元素
+                    avatarImg = document.createElement('img');
+                    avatarImg.className = 'w-100 h-100 rounded-circle';
+                    avatarImg.alt = 'User Avatar';
+                    avatarImg.style.objectFit = 'cover';
+                    
+                    // 清空内容并添加图片
+                    userInitialsElement.textContent = '';
+                    userInitialsElement.appendChild(avatarImg);
+                }
+                
+                // 设置头像图片
+                avatarImg.src = userInfo.avatarUrl;
+                // 重置背景色为透明
+                userInitialsElement.style.backgroundColor = 'transparent';
+            } else {
+                // 没有头像，显示用户名首字母
+                const initials = userInfo.username.charAt(0).toUpperCase();
+                userInitialsElement.textContent = initials;
+                
+                // Set a background color based on username (simple hash for consistent color)
+                const hash = simpleHash(userInfo.username);
+                const hue = hash % 360; // 0-359 hue value
+                userInitialsElement.style.backgroundColor = `hsl(${hue}, 70%, 60%)`;
             }
         }
     }
@@ -111,6 +140,14 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('storage', function(e) {
         if (e.key === 'jwt_token' || e.key === 'user_info') {
             updateAuthUI();
+        }
+    });
+    
+    // 监听自定义事件，当用户信息更新时更新头像
+    document.addEventListener('userInfoUpdated', function(e) {
+        console.log('userInfoUpdated event received', e.detail);
+        if (e.detail && e.detail.newUserInfo) {
+            updateUserAvatar(e.detail.newUserInfo);
         }
     });
 }); 
