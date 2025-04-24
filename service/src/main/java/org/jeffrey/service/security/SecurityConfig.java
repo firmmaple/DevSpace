@@ -63,7 +63,6 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         // Require authentication for any other request
                         .anyRequest().authenticated())
-//                        .anyRequest().authenticated())
 //                .formLogin(form -> form
 //                        // Specify the custom login page URL
 //                        .loginPage("/login")

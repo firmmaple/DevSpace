@@ -20,4 +20,11 @@ public interface UserService extends IService<UserDO> {
      * @return true if registration is successful, false otherwise
      */
     boolean registerUser(String username, String password);
+    
+    /**
+     * Get users by their IDs
+     * @param userIds list of user IDs
+     * @return list of users
+     */
+    List<UserDO> getUsersByIds(List<Long> userIds);
 }

@@ -16,6 +16,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.stereotype.Service;
+import org.jeffrey.core.event.ArticleCollectEvent;
+import org.jeffrey.core.event.ArticleLikeEvent;
+import org.springframework.context.ApplicationEventPublisher;
+import org.jeffrey.service.article.repository.mapper.ArticleLikeMapper;
+import org.jeffrey.service.article.repository.mapper.ArticleCollectMapper;
 // Import exceptions, user service, etc.
 
 
@@ -23,8 +28,10 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ArticleServiceImpl implements ArticleService {
     final private ArticleMapper articleMapper;
-
     final private UserService userService; // Inject user service to get author details
+    final private ApplicationEventPublisher eventPublisher;
+    final private ArticleLikeMapper likeMapper;
+    final private ArticleCollectMapper collectMapper;
 
     @Override
     @TraceLog("创建文章") // Use your AOP logging
@@ -105,6 +112,76 @@ public class ArticleServiceImpl implements ArticleService {
         return articlePage.convert(articleDO -> convertToSummaryVO(articleDO));
     }
 
+    @Override
+    @TraceLog("点赞文章")
+    public void likeArticle(Long articleId, Long userId) {
+        ArticleDO articleDO = articleMapper.selectById(articleId);
+        if (articleDO == null || articleDO.getStatus() == 2) {
+            throw new ResourceNotFoundException("Article not found with ID: " + articleId);
+        }
+        
+        // Publish event - asynchronous processing
+        eventPublisher.publishEvent(new ArticleLikeEvent(this, articleId, userId, true));
+    }
+
+    @Override
+    @TraceLog("取消点赞")
+    public void unlikeArticle(Long articleId, Long userId) {
+        ArticleDO articleDO = articleMapper.selectById(articleId);
+        if (articleDO == null || articleDO.getStatus() == 2) {
+            throw new ResourceNotFoundException("Article not found with ID: " + articleId);
+        }
+        
+        // Publish event - asynchronous processing
+        eventPublisher.publishEvent(new ArticleLikeEvent(this, articleId, userId, false));
+    }
+
+    @Override
+    @TraceLog("收藏文章")
+    public void collectArticle(Long articleId, Long userId) {
+        ArticleDO articleDO = articleMapper.selectById(articleId);
+        if (articleDO == null || articleDO.getStatus() == 2) {
+            throw new ResourceNotFoundException("Article not found with ID: " + articleId);
+        }
+        
+        // Publish event - asynchronous processing
+        eventPublisher.publishEvent(new ArticleCollectEvent(this, articleId, userId, true));
+    }
+
+    @Override
+    @TraceLog("取消收藏")
+    public void uncollectArticle(Long articleId, Long userId) {
+        ArticleDO articleDO = articleMapper.selectById(articleId);
+        if (articleDO == null || articleDO.getStatus() == 2) {
+            throw new ResourceNotFoundException("Article not found with ID: " + articleId);
+        }
+        
+        // Publish event - asynchronous processing
+        eventPublisher.publishEvent(new ArticleCollectEvent(this, articleId, userId, false));
+    }
+
+    @Override
+    public boolean isArticleLikedByUser(Long articleId, Long userId) {
+        if (userId == null) return false;
+        return likeMapper.existsByArticleIdAndUserId(articleId, userId);
+    }
+
+    @Override
+    public boolean isArticleCollectedByUser(Long articleId, Long userId) {
+        if (userId == null) return false;
+        return collectMapper.existsByArticleIdAndUserId(articleId, userId);
+    }
+
+    @Override
+    public Long getArticleLikeCount(Long articleId) {
+        return likeMapper.countByArticleId(articleId);
+    }
+
+    @Override
+    public Long getArticleCollectCount(Long articleId) {
+        return collectMapper.countByArticleId(articleId);
+    }
+
     // --- Helper Methods ---
     private ArticleVO convertToVO(ArticleDO articleDO, Long currentUserId) {
         if (articleDO == null) return null;
@@ -122,12 +199,12 @@ public class ArticleServiceImpl implements ArticleService {
         UserDO author = userService.getById(articleDO.getAuthorId()); // Assuming you have this method
         vo.setAuthorUsername(author != null ? author.getUsername() : "Unknown");
 
-        // TODO: Populate interaction counts and flags (Phase 2)
-        vo.setViewCount(5L); // Placeholder
-        vo.setLikeCount(1L); // Placeholder
-        vo.setCollectCount(8L); // Placeholder
-        vo.setLikedByCurrentUser(false); // Placeholder
-        vo.setCollectedByCurrentUser(false); // Placeholder
+        // Use real data from our new methods instead of placeholders
+        vo.setViewCount(5L); // TODO: Implement view counting
+        vo.setLikeCount(getArticleLikeCount(articleDO.getId())); 
+        vo.setCollectCount(getArticleCollectCount(articleDO.getId())); 
+        vo.setLikedByCurrentUser(isArticleLikedByUser(articleDO.getId(), currentUserId));
+        vo.setCollectedByCurrentUser(isArticleCollectedByUser(articleDO.getId(), currentUserId));
 
         return vo;
     }

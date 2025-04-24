@@ -16,5 +16,21 @@ public interface ArticleService {
     void deleteArticle(Long articleId, Long currentUserId);
 
     IPage<ArticleSummaryVO> listArticles(int pageNum, int pageSize, Long authorId, Integer status); // Add filtering/sorting params
-    // Add methods for interactions later
+    
+    // Article interaction methods
+    void likeArticle(Long articleId, Long userId);
+    
+    void unlikeArticle(Long articleId, Long userId);
+    
+    void collectArticle(Long articleId, Long userId);
+    
+    void uncollectArticle(Long articleId, Long userId);
+    
+    boolean isArticleLikedByUser(Long articleId, Long userId);
+    
+    boolean isArticleCollectedByUser(Long articleId, Long userId);
+    
+    Long getArticleLikeCount(Long articleId);
+    
+    Long getArticleCollectCount(Long articleId);
 }

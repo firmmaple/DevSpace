@@ -70,10 +70,36 @@ public class ArticleRestController {
         return ResVo.ok(page);
     }
 
-    // --- Interaction Endpoints (Phase 2) ---
-    // POST /{id}/like
-    // DELETE /{id}/like
-    // POST /{id}/collect
-    // DELETE /{id}/collect
-    // POST /{id}/view (if explicit view tracking needed)
+    // --- Interaction Endpoints ---
+    @PostMapping("/{id}/like")
+    @TraceLog("点赞文章API")
+    public ResVo<String> likeArticle(@PathVariable Long id,
+                                  @AuthenticationPrincipal CustomUserDetails currentUser) {
+        articleService.likeArticle(id, currentUser.getUserId());
+        return ResVo.ok();
+    }
+
+    @DeleteMapping("/{id}/like")
+    @TraceLog("取消点赞API")
+    public ResVo<String> unlikeArticle(@PathVariable Long id,
+                                    @AuthenticationPrincipal CustomUserDetails currentUser) {
+        articleService.unlikeArticle(id, currentUser.getUserId());
+        return ResVo.ok();
+    }
+
+    @PostMapping("/{id}/collect")
+    @TraceLog("收藏文章API")
+    public ResVo<String> collectArticle(@PathVariable Long id,
+                                     @AuthenticationPrincipal CustomUserDetails currentUser) {
+        articleService.collectArticle(id, currentUser.getUserId());
+        return ResVo.ok();
+    }
+
+    @DeleteMapping("/{id}/collect")
+    @TraceLog("取消收藏API")
+    public ResVo<String> uncollectArticle(@PathVariable Long id,
+                                       @AuthenticationPrincipal CustomUserDetails currentUser) {
+        articleService.uncollectArticle(id, currentUser.getUserId());
+        return ResVo.ok();
+    }
 }

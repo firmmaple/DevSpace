@@ -75,3 +75,42 @@ INSERT INTO `article` (`title`, `summary`, `content`, `author_id`, `status`, `cr
  '设计模式是解决软件设计中常见问题的可复用方案，本文介绍常用设计模式及其应用场景。', 
  '# 深入浅出设计模式\n\n## 1. 创建型模式\n\n### 1.1 单例模式\n\n```java\npublic class Singleton {\n    private static volatile Singleton instance;\n    \n    private Singleton() {}\n    \n    public static Singleton getInstance() {\n        if (instance == null) {\n            synchronized (Singleton.class) {\n                if (instance == null) {\n                    instance = new Singleton();\n                }\n            }\n        }\n        return instance;\n    }\n}\n```\n\n### 1.2 工厂方法模式\n\n### 1.3 抽象工厂模式\n\n### 1.4 建造者模式\n\n## 2. 结构型模式\n\n### 2.1 适配器模式\n\n### 2.2 装饰器模式\n\n### 2.3 代理模式\n\n## 3. 行为型模式\n\n### 3.1 观察者模式\n\n### 3.2 策略模式\n\n### 3.3 命令模式\n\n## 4. 设计模式的应用\n\n- Spring框架中的设计模式\n- Java标准库中的设计模式\n\n## 5. 总结\n\n设计模式不是银弹，应根据实际情况选择合适的模式，避免过度设计。',
  2, 1, '2023-09-10 16:45:00');
+
+-- Article Like Table
+CREATE TABLE IF NOT EXISTS `article_like` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `article_id` bigint NOT NULL COMMENT '文章ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_article_user` (`article_id`,`user_id`),
+  KEY `idx_article_id` (`article_id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='文章点赞表';
+
+-- Article Collect Table
+CREATE TABLE IF NOT EXISTS `article_collect` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `article_id` bigint NOT NULL COMMENT '文章ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_article_user` (`article_id`,`user_id`),
+  KEY `idx_article_id` (`article_id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='文章收藏表';
+
+-- Comment Table
+CREATE TABLE IF NOT EXISTS `comment` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `article_id` bigint NOT NULL COMMENT '文章ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `content` text NOT NULL COMMENT '评论内容',
+  `parent_id` bigint DEFAULT NULL COMMENT '父评论ID，顶层评论为NULL',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_article_id` (`article_id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_parent_id` (`parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='评论表';

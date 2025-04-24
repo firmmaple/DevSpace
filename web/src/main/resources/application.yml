@@ -15,6 +15,28 @@ spring:
     livereload:
       enabled: true
 
+  # RabbitMQ Configuration
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin
+    # Enables publisher confirms
+    publisher-confirm-type: correlated
+    # Enables publisher returns
+    publisher-returns: true
+    template:
+      # Enables mandatory flag
+      mandatory: true
+    listener:
+      simple:
+        # Acknowledges messages manually
+        acknowledge-mode: manual
+        # Number of concurrent consumers
+        concurrency: 3
+        # Maximum number of concurrent consumers
+        max-concurrency: 10
+
 
 knife4j:
   enable: true

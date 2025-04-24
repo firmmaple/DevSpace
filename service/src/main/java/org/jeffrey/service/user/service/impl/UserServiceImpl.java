@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,5 +47,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
 
         // Save user to database
         return save(user);
+    }
+    
+    @Override
+    public List<UserDO> getUsersByIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return listByIds(userIds);
     }
 }
