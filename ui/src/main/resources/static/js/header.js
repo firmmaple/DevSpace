@@ -13,12 +13,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Debug - check if AuthUtils is loaded
     console.log("Header.js - AuthUtils available:", window.AuthUtils ? "Yes" : "No");
     
+    // Helper function to get cookie by name
+    function getCookie(name) {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith(name + '=')) {
+                return decodeURIComponent(cookie.substring(name.length + 1));
+            }
+        }
+        return null;
+    }
+    
     // Check if user is authenticated
     function updateAuthUI() {
-        // Directly check localStorage if AuthUtils is not available
+        // Use AuthUtils if available, otherwise check cookie directly
         const isAuthenticated = window.AuthUtils ? 
             AuthUtils.isAuthenticated() : 
-            !!localStorage.getItem('jwt_token');
+            !!getCookie('user_info');
             
         console.log("Header updateAuthUI - Auth status:", isAuthenticated);    
         
@@ -38,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (window.AuthUtils) {
                 userInfo = AuthUtils.getUserInfo();
             } else {
-                const userInfoStr = localStorage.getItem('user_info');
+                const userInfoStr = getCookie('user_info');
                 userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
             }
             
@@ -77,6 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update user avatar based on user info
     function updateUserAvatar(userInfo) {
+        console.log("updateUserAvatar - userInfo:", userInfo);
         if (userInfo && userInitialsElement) {
             if (userInfo.avatarUrl) {
                 // 用户有头像，显示头像图片
@@ -136,12 +149,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial UI update
     updateAuthUI();
     
-    // Update UI whenever the storage changes (in case of login/logout in another tab)
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'jwt_token' || e.key === 'user_info') {
-            updateAuthUI();
-        }
-    });
+    // Monitor cookie changes by periodically checking
+    // (cookies don't trigger storage events like localStorage)
+    setInterval(updateAuthUI, 5000);
     
     // 监听自定义事件，当用户信息更新时更新头像
     document.addEventListener('userInfoUpdated', function(e) {

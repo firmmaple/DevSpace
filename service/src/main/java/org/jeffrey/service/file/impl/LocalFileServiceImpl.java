@@ -30,7 +30,7 @@ public class LocalFileServiceImpl implements FileService {
     @Value("${app.file.upload-dir:uploads}")
     private String uploadDir;
 
-    @Value("${app.file.base-url:http://localhost:8080/api/file}")
+    @Value("${app.file.base-url:http://localhost:8088/api/file}")
     private String baseUrl;
 
     @Override
@@ -116,5 +116,10 @@ public class LocalFileServiceImpl implements FileService {
         }
         
         return path;
+    }
+    
+    @Override
+    public String getBaseUrl() {
+        return baseUrl;
     }
 } 

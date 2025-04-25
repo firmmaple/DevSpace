@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.jeffrey.service.article.repository.mapper.CommentMapper">
+    <select id="findByArticleIdAndParentIdIsNull" resultType="org.jeffrey.service.article.repository.entity.CommentDO">
+        SELECT * FROM comment 
+        WHERE article_id = #{articleId} AND parent_id IS NULL
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findByArticleId" resultType="org.jeffrey.service.article.repository.entity.CommentDO">
+        SELECT * FROM comment
+        WHERE article_id = #{articleId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findByParentId" resultType="org.jeffrey.service.article.repository.entity.CommentDO">
+        SELECT * FROM comment 
+        WHERE parent_id = #{parentId}
+        ORDER BY created_at ASC
+    </select>
+    
+    <select id="countByArticleId" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM comment WHERE article_id = #{articleId}
+    </select>
+</mapper>

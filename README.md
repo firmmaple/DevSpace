@@ -2,8 +2,8 @@
 
 ## 项目介绍
 
-DevSpace是一个基于SpringBoot的博客社区，面向互联网开发者的技术内容分享欲交流平台 ，拥有完整的文章发布，评论，点赞，收藏，搜索，统计等功能，
-前端使用Thymeleaf(后期可能会使用React实现) ，后端使用SpringBoot+MyBatis-Plus+MySQL+Redis+RabbitMQ。
+DevSpace是一个基于SpringBoot的博客社区，面向互联网开发者的技术内容分享与交流平台，拥有完整的文章发布、评论、点赞、收藏、搜索、统计、用户资料管理等功能。
+前端使用Thymeleaf + Bootstrap 5.x，后端使用SpringBoot + MyBatis-Plus + MySQL + Redis + RabbitMQ。
 
 主要目标为通过这个项目学习SpringBoot的使用，写入CV作为个人项目。
 
@@ -15,7 +15,7 @@ DevSpace是一个基于SpringBoot的博客社区，面向互联网开发者的�
 DevSpace
 ├── api -- 定义一些通用的枚举、实体类，定义 DO\DTO\VO 等
 ├── core -- 核心工具/组件相关模块，如工具包 util， 通用的组件都放在这个模块（以包路径对模块功能进行拆分，如搜索、缓存、推荐等）
-├── service -- 服务模块，业务相关的主要逻辑，DB 的操作都在这里
+├── service -- 服务模块，业务相关的主要逻辑，DB 的操作都在这里（包含文件服务）
 ├── ui -- HTML 前端资源（包括 JavaScript、CSS、Thymeleaf 等）
 ├── web -- Web模块、HTTP入口、项目启动入口，包括权限身份校验、全局异常处理等
 ```
@@ -53,16 +53,18 @@ DevSpace
 │       ├── security/    # Spring Security 配置、过滤器、服务、处理器
 │       ├── user/        # 用户服务、仓库 (Mapper/Entity)
 │       ├── article/     # 文章服务、仓库 (Mapper/Entity)
+│       ├── file/        # 文件服务 (LocalFileServiceImpl)
 │       └── *.java       # 配置类 (MybatisPlusConfig, ServiceAutoConfig)
 ├── ui/              # 前端资源
 │   └── src/main/resources/
-│       ├── templates/   # Thymeleaf模板 (layout/, articles/, *.html)
+│       ├── templates/   # Thymeleaf模板 (layout/, articles/, user/, *.html)
 │       └── static/      # 静态资源 (js/, css/, images/)
 ├── web/             # Web入口、控制器、全局异常处理
 │   └── src/main/java/org/jeffrey/web/
 │       ├── login/       # 认证控制器 (AuthController)
 │       ├── article/     # 文章控制器 (ArticleController, ArticleRestController)
-│       ├── user/        # 用户相关控制器 (ProfileController)
+│       ├── user/        # 用户相关控制器 (ProfileController, UserProfileRestController)
+│       ├── file/        # 文件访问控制器 (FileController)
 │       ├── home/        # 首页控制器
 │       ├── exception/   # 全局异常处理器 (GlobalExceptionHandler)
 │       └── DevSpaceApplication.java # Spring Boot启动类
@@ -73,6 +75,7 @@ DevSpace
 │       └── logback.xml     # 日志配置
 ├── logs/            # 日志文件目录 (运行时生成)
 ├── DOCUMENT.md      # 项目详细设计文档
+├── CHANGE.md        # 功能变更记录
 └── README.md        # 本文件
 ```
 
@@ -176,7 +179,7 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
 2. **文章详情**
    - 完整展示文章内容
    - 作者信息展示
-   - 文章互动功能（点赞、收藏）
+   - 文章互动功能（点赞、收藏、评论）
    - 相关文章推荐
    - 标签展示和导航
 
@@ -198,6 +201,7 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
    - JavaScript动态加载和渲染内容
    - Fetch API进行前后端数据交互
    - Quill富文本编辑器处理文章内容
+   - HTML/JavaScript 分离 (`article/detail.js` 用于详情页逻辑)
 
 2. **后端实现**:
    - `ArticleController` 处理页面路由
@@ -228,7 +232,6 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
 
 ### 下一步计划
 
-- 实现文章评论功能
 - 添加文章标签管理系统
 - 实现文章分类功能
 - 添加文章搜索（全文检索）
@@ -236,7 +239,7 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
 
 ## 3.3 用户认证与注册
 
-DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 和 JWT (JSON Web Tokens)。JWT 现在通过安全的 HTTP-only Cookie 进行传输。
+DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 和 JWT (JSON Web Tokens)。JWT 通过安全的 HTTP-only Cookie 进行传输。
 
 ### 已实现功能
 
@@ -256,13 +259,20 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
     - 页面访问未登录重定向: 直接访问需要登录的页面时，`CustomAuthenticationEntryPoint` 会自动重定向到 `/login` 并附带原始URL作为 `redirect` 参数。
     - API访问未登录处理: 请求需要认证的 API 时，如果未提供有效 Token，`CustomAuthenticationEntryPoint` 会委托 `GlobalExceptionHandler` 返回 `StatusEnum.FORBID_NOTLOGIN` (100_403_003) 的 JSON 响应。
 
+3. **Cookie-based 用户信息存储**
+    - **用户身份令牌存储**: JWT 令牌通过 HTTP-Only Cookie 存储，提供了更高的安全性，防止 XSS 攻击。
+    - **用户信息存储**: 用户信息（用户名、头像等）通过标准 Cookie (`user_info`) 存储，允许前端 JavaScript 访问用于界面显示。
+    - **统一的认证机制**: 所有认证相关数据都通过 Cookie 传输，确保跨页面的一致性和安全性。
+    - **自动凭证传输**: 所有 API 请求使用 `credentials: 'include'` 确保 Cookie 自动随请求发送。
+
 ### 技术实现
 
-1. **前端实现**:
+1. **前端实现** (`AuthUtils.js`):
     - Thymeleaf 模板引擎渲染的注册和登录页面
     - Bootstrap 5.3 提供的样式和布局
     - 客户端 JavaScript 验证
-    - **使用 `AuthUtils.authenticatedFetch`**: 自动包含 `credentials: 'include'` 选项，确保浏览器随请求发送 `jwt_token` Cookie。
+    - **统一认证工具 (`AuthUtils`)**: 提供 `setUserInfo`, `getUserInfo`, `isAuthenticated`, `logout` 等方法，封装了 Cookie 操作。
+    - **使用 `AuthUtils.authenticatedFetch`**: 自动包含 `credentials: 'include'` 选项，确保浏览器随请求发送 Cookie。
 
 2. **后端实现**:
     - `AuthController` 处理认证和注册请求
@@ -282,40 +292,40 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
 
 为确保API请求的安全性和一致性，DevSpace遵循以下前端请求规范：
 
-1.  **强制使用 `AuthUtils.authenticatedFetch`**: 所有需要认证的API请求**必须**使用`AuthUtils.authenticatedFetch(url, options)`。此函数会自动：
-    *   设置 `credentials: 'include'`，指示浏览器发送 Cookie（包括 `jwt_token`）。
-    *   调用 `fetch` 并解析响应为 JSON。
-    *   调用 `AuthUtils.handleApiResponse(jsonData)` 进行初步处理：
-        *   处理未登录 (`100_403_003`) 和其他 API 错误。
-        *   成功时返回完整的原始 JSON 响应对象。
+1. **强制使用 `AuthUtils.authenticatedFetch`**: 所有需要认证的API请求**必须**使用`AuthUtils.authenticatedFetch(url, options)`。此函数会自动：
+   * 设置 `credentials: 'include'`，指示浏览器发送 Cookie（包括 `jwt_token`）。
+   * 调用 `fetch` 并解析响应为 JSON。
+   * 调用 `AuthUtils.handleApiResponse(jsonData)` 进行初步处理：
+     * 处理未登录 (`100_403_003`) 和其他 API 错误。
+     * 成功时返回完整的原始 JSON 响应对象。
 
-2.  **处理 `authenticatedFetch` 的结果**: 你的 `.then()` 回调函数将直接收到**完整的 JSON 响应对象**。你需要从中提取 `result` 部分来获取业务数据。**不要**再次调用 `.json()`。
+2. **处理 `authenticatedFetch` 的结果**: 你的 `.then()` 回调函数将直接收到**完整的 JSON 响应对象**。你需要从中提取 `result` 部分来获取业务数据。**不要**再次调用 `.json()`。
 
-    ```javascript
-    // 正确使用 authenticatedFetch (JWT 通过 Cookie 自动发送)
-    AuthUtils.authenticatedFetch('/api/user/profile')
-      .then(response => {
-        // 'response' 是完整的 JSON 对象, 例如 { status: { code: 0, msg: 'OK' }, result: { username: '...', ... } }
-        // 不需要再调用 response.json()
-        if (response.status.code === 0) {
-            const userData = response.result;
-            console.log(userData.username);
-            renderUserProfile(userData);
-        } else {
-            console.error("获取用户信息失败:", response.status.msg);
-            showError(response.status.msg);
-        }
-      })
-      .catch(error => {
-        // 处理由 handleApiResponse 或 fetch 本身抛出的错误
-        console.error("获取用户信息失败:", error.message);
-        showError(error.message);
-      });
-    ```
+   ```javascript
+   // 正确使用 authenticatedFetch (JWT 通过 Cookie 自动发送)
+   AuthUtils.authenticatedFetch('/api/user/profile')
+     .then(response => {
+       // 'response' 是完整的 JSON 对象, 例如 { status: { code: 0, msg: 'OK' }, result: { username: '...', ... } }
+       // 不需要再调用 response.json()
+       if (response.status.code === 0) {
+           const userData = response.result;
+           console.log(userData.username);
+           renderUserProfile(userData);
+       } else {
+           console.error("获取用户信息失败:", response.status.msg);
+           showError(response.status.msg);
+       }
+     })
+     .catch(error => {
+       // 处理由 handleApiResponse 或 fetch 本身抛出的错误
+       console.error("获取用户信息失败:", error.message);
+       showError(error.message);
+     });
+   ```
 
-3.  **统一错误处理**: 在 `.catch()` 块中处理特定于该 API 调用的错误。通用错误（如未登录）已由 `authenticatedFetch` 内部处理。
+3. **统一错误处理**: 在 `.catch()` 块中处理特定于该 API 调用的错误。通用错误（如未登录）已由 `authenticatedFetch` 内部处理。
 
-4.  **用户信息存储**: 用户信息（如用户名、ID）在登录成功后存储在 `localStorage` 中（通过 `AuthUtils.setUserInfo`)，用于 UI 显示。JWT 令牌本身**不再**存储在 `localStorage`。
+4. **用户信息存储**: 用户信息（如用户名、ID、头像URL）在登录成功后存储在 Cookie (`user_info`) 中（通过 `AuthUtils.setUserInfo`)，用于 UI 显示。JWT 令牌本身存储在 HTTP-only Cookie (`jwt_token`) 中。
 
 - **UI 模板**:
     - `ui/src/main/resources/templates/register.html` - 注册表单
@@ -332,13 +342,54 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
 
 ### 下一步计划
 
-- 添加用户个人资料功能
 - 添加邮箱验证
 - 实现密码重置功能
 - 增强密码策略
 - 添加第三方登录（如 GitHub, Google）
 
-## 3.4 前端布局系统
+## 3.4 用户资料管理
+
+DevSpace 允许用户查看和编辑自己的个人资料，并上传头像。
+
+### 已实现功能
+
+1.  **个人资料页面 (`/profile`)**: 显示用户的基本信息（用户名、邮箱、简介、加入日期）和头像。
+2.  **资料编辑**: 用户可以修改用户名、邮箱和个人简介。
+3.  **头像上传**: 用户可以点击头像区域上传新的头像图片 (JPG/PNG, < 2MB)。
+4.  **实时更新**: 编辑资料或上传头像后，页面和 Header 中的用户信息会实时更新。
+5.  **用户名变更**: 如果用户名被修改，系统会重新生成 JWT 令牌并更新 Cookie，以维持登录状态。
+
+### 技术实现
+
+1.  **前端 (`profile.js`)**: 
+    *   使用 `AuthUtils` 获取和更新用户信息 Cookie。
+    *   通过 `authenticatedFetch` 调用后端 API 获取和提交资料。
+    *   使用 `FormData` 上传头像文件。
+    *   触发 `userInfoUpdated` 自定义事件通知 Header 更新。
+2.  **后端 (`ProfileController`, `UserProfileRestController`)**: 
+    *   提供 `/profile` 页面路由。
+    *   提供 `/api/user/profile` (GET/POST) 和 `/api/user/avatar` (POST) API 端点。
+    *   使用 `UserService` 处理业务逻辑。
+    *   使用 `FileService` (本地存储实现 `LocalFileServiceImpl`) 处理文件上传。
+    *   `FileController` 提供头像文件的访问端点 (`/api/file/avatars/{filename}`).
+3.  **服务 (`UserServiceImpl`, `LocalFileServiceImpl`)**: 
+    *   `UserService` 负责更新用户数据库记录。
+    *   `FileService` 负责文件验证、存储和 URL 生成。
+
+### 代码位置
+
+-   **UI 模板**: `ui/src/main/resources/templates/profile.html`
+-   **前端脚本**: `ui/src/main/resources/static/js/profile.js`
+-   **控制器**: 
+    -   `web/src/main/java/org/jeffrey/web/user/ProfileController.java`
+    -   `web/src/main/java/org/jeffrey/web/user/UserProfileRestController.java`
+    -   `web/src/main/java/org/jeffrey/web/file/FileController.java`
+-   **服务**: 
+    -   `service/src/main/java/org/jeffrey/service/user/service/impl/UserServiceImpl.java`
+    -   `service/src/main/java/org/jeffrey/service/file/impl/LocalFileServiceImpl.java`
+-   **DTO/VO**: `UserUpdateDTO`, `UserVO`
+
+## 3.5 前端布局系统
 
 DevSpace 使用 Thymeleaf 模板引擎构建了一个模块化的前端布局系统，使页面结构统一、代码复用性高。
 
@@ -349,6 +400,12 @@ ui/src/main/resources/templates/
 ├── layout/
 │   ├── main.html    # 主布局文件，所有页面的基础模板
 │   └── header.html  # 页面头部布局，包含导航栏和用户菜单
+├── articles/        # 文章相关页面
+│   ├── list.html    # 文章列表页
+│   ├── detail.html  # 文章详情页
+│   └── create.html  # 文章创建页
+├── user/
+│   └── profile.html # 用户资料页
 ├── index.html       # 首页内容片段
 ├── login.html       # 登录页面
 └── register.html    # 注册页面
@@ -373,13 +430,40 @@ ui/src/main/resources/templates/
     - 控制器设置 `viewName` 属性来决定加载哪个内容片段
     - 可以通过 `th:fragment="scripts"` 定义页面特定的脚本
 
+### HTML 与 JavaScript 分离
+
+为了提高代码的可维护性和复用性，DevSpace 实现了 HTML 与 JavaScript 的分离：
+
+1. **结构与行为分离**:
+    - HTML 文件仅包含页面结构和静态元素
+    - JavaScript 逻辑放在单独的 .js 文件中
+    - 通过 `th:src` 属性引用外部 JavaScript 文件
+
+2. **文件组织**:
+    ```
+    ui/src/main/resources/static/js/
+    ├── auth.js       # 认证相关工具和函数
+    ├── header.js     # 全局头部交互逻辑
+    ├── profile.js    # 用户资料页面逻辑
+    └── article/
+        └── detail.js # 文章详情页脚本
+    ```
+
+3. **脚本引用方式**:
+    ```html
+    <!-- 在页面的 scripts 片段中引用对应的 JS 文件 (e.g., article/detail.html) -->
+    <th:block th:fragment="scripts">
+        <script th:src="@{/js/article/detail.js}"></script>
+    </th:block>
+    ```
+
 ### 认证状态切换
 
 用户界面会根据认证状态动态变化：
 
 1. **已登录状态**
     - 显示用户头像和用户名
-    - 显示用户下拉菜单（包含发布文章、我的文章等选项）
+    - 显示用户下拉菜单（包含发布文章、我的文章、个人资料等选项）
     - 隐藏登录/注册按钮
 
 2. **未登录状态**
@@ -389,8 +473,8 @@ ui/src/main/resources/templates/
 实现方式：
 
 - 使用 CSS 类（force-show/force-hide）控制元素显示/隐藏
-- 通过 JavaScript（header.js）检测用户认证状态
-- 根据localStorage中的JWT令牌判断登录状态
+- 使用 JavaScript（header.js）检测用户认证状态
+- 根据Cookie中的用户信息 (`user_info`) 判断登录状态
 
 ### 控制器集成
 
@@ -409,7 +493,7 @@ public String index(Model model) {
 }
 ```
 
-## 3.5 全局异常处理系统
+## 3.6 全局异常处理系统
 
 DevSpace 实现了一个基于 `@RestControllerAdvice` 的全局异常处理系统，用于统一处理 Web 层（特别是 REST API）抛出的异常，并返回标准化的 `ResVo` 响应。
 
@@ -468,7 +552,7 @@ AuthUtils.authenticatedFetch('/api/users/' + userId)
   });
 ```
 
-## 3.6 管理后台 (Admin Management)
+## 3.7 管理后台 (Admin Management)
 
 DevSpace 包含一个管理后台，仅限具有 `ROLE_ADMIN` 角色的用户访问。
 
@@ -501,6 +585,59 @@ DevSpace 包含一个管理后台，仅限具有 `ROLE_ADMIN` 角色的用户访
 -   **安全配置**: `service/src/main/java/org/jeffrey/service/security/SecurityConfig.java`
 -   **用户详情**: `service/src/main/java/org/jeffrey/service/security/CustomUserDetails.java`
 -   **前端脚本**: `ui/src/main/resources/static/js/header.js`
+
+## 3.8 文章互动系统
+
+DevSpace 采用事件驱动架构和消息队列实现文章交互功能（点赞、收藏、评论），提高系统性能和用户体验。
+
+#### 3.8.1 核心特性
+
+- **异步处理**：使用Spring事件 + RabbitMQ实现异步处理，减轻主业务线程负担
+- **乐观UI**：前端实现乐观更新策略，提供即时反馈
+- **可靠性**：消息队列确保互动数据最终一致性
+- **扩展性**：事件驱动设计便于添加新的互动类型
+
+#### 3.8.2 评论系统改进
+
+- **用户头像展示**：评论和回复中显示用户的头像。
+- **无层级限制**：支持任意层级的评论嵌套回复。
+- **优化加载**：提高了单次加载的评论数量。
+- **代码分离**：评论相关的前端逻辑已整合到 `article/detail.js`。
+
+#### 3.8.3 技术实现
+
+- Spring事件：用于应用内部事件发布与监听
+- RabbitMQ：实现可靠的异步消息处理
+- 消息持久化：确保系统重启后消息不丢失
+- 失败重试：支持消息处理失败后的自动重试
+- `CommentVO` 扩展：增加了 `avatarUrl` 字段。
+- `CommentService` 优化：批量获取用户信息以提高效率。
+
+#### 3.8.4 性能优势
+
+- 提高响应速度：主线程不等待互动处理完成即可返回
+- 削峰填谷：消息队列缓冲高峰期的互动请求
+- 资源隔离：交互处理失败不影响主业务流程
+- 简化维护：便于监控和排查互动相关问题
+
+## 3.9 大整数ID处理
+
+DevSpace 使用 Java 的 Long 类型作为实体 ID，采用特定策略处理 JavaScript 中的大整数精度问题。
+
+#### 3.9.1 问题与解决方案
+
+- **问题**：Long 类型 ID 可能超出 JavaScript 安全整数范围 (2^53-1)，导致精度丢失
+- **解决方案**：
+  - 后端：使用 `@JsonSerialize(using = ToStringSerializer.class)` 将 ID 序列化为字符串
+  - 前端：始终以字符串形式处理 ID，避免数值转换和运算 (例如使用 `dataset.originalId` 存储原始字符串ID)
+
+#### 3.9.2 最佳实践
+
+- 所有实体 ID 字段在 API 响应中都以字符串形式返回
+- 前端发送请求时保持 ID 的字符串形式
+- 避免使用 `parseInt()` 或 `Number()` 等转换 ID
+- DOM 属性中保持 ID 的字符串形式
+- 必要时使用 `BigInt` 类型处理大整数运算
 
 
 

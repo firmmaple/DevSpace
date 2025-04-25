@@ -20,6 +20,7 @@ public class CustomUserDetails implements UserDetails {
     private final String username;
     private final String password;
     private final boolean isAdmin;
+    private String avatarUrl;
 
 
     public CustomUserDetails(UserDO userDO) {
@@ -27,10 +28,11 @@ public class CustomUserDetails implements UserDetails {
         this.username = userDO.getUsername();
         this.password = userDO.getPassword();
         this.isAdmin = userDO.getIsAdmin();
+        this.avatarUrl = userDO.getAvatarUrl();
     }
 
     public UserDTO toUserDTO(){
-       return new UserDTO(userId, username, password, isAdmin);
+       return new UserDTO(userId, username, password, isAdmin, avatarUrl);
     }
 
     @Override

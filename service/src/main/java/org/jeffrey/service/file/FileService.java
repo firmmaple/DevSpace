@@ -42,4 +42,11 @@ public interface FileService {
      * @return 文件名
      */
     String extractFilename(String fileUrl);
+    
+    /**
+     * 获取文件服务的基础URL
+     *
+     * @return 基础URL
+     */
+    String getBaseUrl();
 } 

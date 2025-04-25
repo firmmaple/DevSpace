@@ -3,6 +3,7 @@ package org.jeffrey.service.user.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.jeffrey.api.dto.user.UserUpdateDTO;
 import org.jeffrey.api.vo.User.UserVO;
+import org.jeffrey.service.file.FileService;
 import org.jeffrey.service.user.repository.entity.UserDO;
 import org.jeffrey.service.user.repository.mapper.UserMapper;
 import org.jeffrey.service.user.service.UserService;
@@ -14,13 +15,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import lombok.RequiredArgsConstructor;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,9 +24,11 @@ import java.util.UUID;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements UserService {
     private final PasswordEncoder passwordEncoder;
+    private final FileService fileService;
 
-    public UserServiceImpl(@Lazy PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(@Lazy PasswordEncoder passwordEncoder, FileService fileService) {
         this.passwordEncoder = passwordEncoder;
+        this.fileService = fileService;
     }
 
     @Override
@@ -59,6 +57,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
 
         // Save user to database
         return save(user);
+    }
+
+    @Override
+    public List<UserDO> getUsersByIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return listByIds(userIds);
     }
 
     /**
@@ -102,7 +108,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         // 如果未获取到认证信息，抛出异常
         throw new RuntimeException("用户未登录");
     }
-    
+
     /**
      * 更新用户头像
      * @param avatar 头像文件
@@ -113,39 +119,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         if (avatar.isEmpty()) {
             throw new RuntimeException("上传的头像文件为空");
         }
-        
+
         // 获取当前登录用户
         Long currentUserId = getCurrentUserId();
         UserDO user = this.getById(currentUserId);
         if (user == null) {
             throw new RuntimeException("用户不存在");
         }
-        
-        try {
-            // 生成唯一文件名
-            String originalFilename = avatar.getOriginalFilename();
-            String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String filename = UUID.randomUUID().toString() + extension;
-            
-            // 确保上传目录存在
-            String uploadDir = "uploads/avatars";
-            Path uploadPath = Paths.get(uploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-            
-            // 保存文件
-            Path filePath = uploadPath.resolve(filename);
-            Files.copy(avatar.getInputStream(), filePath);
-            
+
+        // 使用FileService上传头像
+        String[] allowedTypes = {"image/jpeg", "image/png"};
+        long maxSize = 2 * 1024 * 1024; // 2MB
+        String avatarUrl = fileService.uploadFile(avatar, "avatars", allowedTypes, maxSize);
+
             // 更新用户头像URL
-            String avatarUrl = "/uploads/avatars/" + filename;
             user.setAvatarUrl(avatarUrl);
             this.updateById(user);
-            
+
             return avatarUrl;
-        } catch (IOException e) {
-            throw new RuntimeException("保存头像失败: " + e.getMessage());
-        }
     }
 }

@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserService extends IService<UserDO> {
+    // IService 提供了如 save, saveBatch, saveOrUpdate, removeById,
+    // updateById, getById, list, page 等常用业务方法。
     public List<UserDO> getAllUsers();
 
     public Optional<UserDO> getUserByUsername(String username);
@@ -23,11 +25,18 @@ public interface UserService extends IService<UserDO> {
     boolean registerUser(String username, String password);
 
     UserVO updateUserProfile(UserUpdateDTO dto);
-    
+
     /**
      * 更新用户头像
      * @param avatar 头像文件
      * @return 头像URL
      */
     String updateUserAvatar(MultipartFile avatar);
+
+    /**
+     * Get users by their IDs
+     * @param userIds list of user IDs
+     * @return list of users
+     */
+    List<UserDO> getUsersByIds(List<Long> userIds);
 }

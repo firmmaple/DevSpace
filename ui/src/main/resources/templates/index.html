@@ -215,10 +215,22 @@
                 // Debug - check if AuthUtils is available
                 console.log("Index.js - AuthUtils available:", window.AuthUtils ? "Yes" : "No");
                 
-                // Check authentication directly from localStorage if needed
+                // Helper function to get cookie by name
+                function getCookie(name) {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.startsWith(name + '=')) {
+                            return decodeURIComponent(cookie.substring(name.length + 1));
+                        }
+                    }
+                    return null;
+                }
+                
+                // Check authentication from cookie
                 const isAuthenticated = window.AuthUtils ? 
                     AuthUtils.isAuthenticated() : 
-                    !!localStorage.getItem('jwt_token');
+                    !!getCookie('user_info');
                 
                 console.log("User is authenticated:", isAuthenticated);
                 
@@ -228,7 +240,7 @@
                     if (window.AuthUtils) {
                         userInfo = AuthUtils.getUserInfo();
                     } else {
-                        const userInfoStr = localStorage.getItem('user_info');
+                        const userInfoStr = getCookie('user_info');
                         userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
                     }
                     

@@ -94,9 +94,21 @@
         
         <script th:inline="javascript">
             document.addEventListener('DOMContentLoaded', function() {
+                // Helper function to get cookie by name
+                function getCookie(name) {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.startsWith(name + '=')) {
+                            return decodeURIComponent(cookie.substring(name.length + 1));
+                        }
+                    }
+                    return null;
+                }
+                
                 // Check if user is logged in
-                const token = localStorage.getItem('jwt_token');
-                if (!token) {
+                const userInfo = getCookie('user_info');
+                if (!userInfo) {
                     // Redirect to login if not logged in
                     window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
                     return;
@@ -189,9 +201,7 @@
                 // Load article for editing
                 function loadArticle(id) {
                     fetch(`/api/articles/${id}`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
+                        credentials: 'include'  // Include cookies for authentication
                     })
                     .then(response => response.json())
                     .then(data => {
@@ -235,9 +245,9 @@
                     fetch(url, {
                         method: method,
                         headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
+                            'Content-Type': 'application/json'
                         },
+                        credentials: 'include',  // Include cookies for authentication
                         body: JSON.stringify(articleData)
                     })
                     .then(response => response.json())

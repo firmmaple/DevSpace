@@ -17,6 +17,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        log.debug("开始加载用户信息: {}", username);
         UserDO UserDO = userService.getUserByUsername(username)
                 .orElseThrow(() -> {
                     log.debug("用户名不存在！");

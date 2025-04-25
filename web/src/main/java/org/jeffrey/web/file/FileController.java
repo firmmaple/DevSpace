@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jeffrey.core.trace.TraceLog;
 import org.jeffrey.service.file.FileService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -26,9 +27,12 @@ import java.nio.file.Paths;
 @RequestMapping("/api/file")
 @RequiredArgsConstructor
 public class FileController {
-    
+
     private final FileService fileService;
-    
+
+    @Value("${app.file.avatar-dir:avatars}")
+    private String avatarDir;
+
     /**
      * 通用文件访问端点
      */
@@ -37,17 +41,17 @@ public class FileController {
     public ResponseEntity<Resource> getFile(
             @PathVariable String directory,
             @PathVariable String filename) {
-        
+
         try {
-            // 构建文件路径
-            String filePath = "uploads/" + directory + "/" + filename;
+            // 使用FileService获取文件路径
+            String filePath = fileService.getFilePath(fileService.getBaseUrl() + "/" + directory + "/" + filename);
             Path path = Paths.get(filePath);
             Resource resource = new UrlResource(path.toUri());
-            
+
             if (resource.exists()) {
                 // 根据文件扩展名确定内容类型
                 String contentType = determineContentType(filename);
-                
+
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(contentType))
                         .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
@@ -61,7 +65,16 @@ public class FileController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
+    /**
+     * 头像访问专用端点
+     */
+    @GetMapping("/${app.file.avatar-dir:avatars}/{filename:.+}")
+    @TraceLog("获取用户头像")
+    public ResponseEntity<Resource> getAvatar(@PathVariable String filename) {
+        return getFile(avatarDir, filename);
+    }
+
     /**
      * 根据文件名确定内容类型
      */

@@ -236,31 +236,35 @@
                                 console.log("Is authenticated:", AuthUtils.isAuthenticated());
                             } else {
                                 // Fallback if AuthUtils is not available
-                                localStorage.setItem('jwt_token', token);
-                                localStorage.setItem('user_info', JSON.stringify(user));
+                                // Set user_info as a cookie
+                                document.cookie = `user_info=${encodeURIComponent(JSON.stringify(user))};path=/;max-age=604800`;
                                 console.log("User authenticated(fallback):", user);
                             }
+                            
                             // 首先检查URL中的redirect参数
                             const urlParams = new URLSearchParams(window.location.search);
                             const urlRedirect = urlParams.get('redirect');
                             
-                            // 然后检查localStorage中的重定向URL
-                            const storedRedirect = localStorage.getItem('redirectUrl');
-                            
-                            // 确定最终的重定向URL，优先使用URL参数中的值
-                            let finalRedirect = '/';
-                            if (urlRedirect) {
-                                finalRedirect = urlRedirect;
-                                console.log("使用URL参数中的重定向地址:", finalRedirect);
-                            } else if (storedRedirect) {
-                                finalRedirect = storedRedirect;
-                                console.log("使用localStorage中的重定向地址:", finalRedirect);
+                            // 然后检查Cookie中的重定向URL
+                            let storedRedirect = null;
+                            const cookies = document.cookie.split(';');
+                            for (let i = 0; i < cookies.length; i++) {
+                                const cookie = cookies[i].trim();
+                                if (cookie.startsWith('redirectUrl=')) {
+                                    storedRedirect = decodeURIComponent(cookie.substring('redirectUrl='.length));
+                                    break;
+                                }
                             }
                             
-                            // 清除localStorage中的重定向URL
-                            localStorage.removeItem('redirectUrl');
+                            // 确定最终的重定向URL，优先使用URL参数中的值
+                            const finalRedirect = urlRedirect || storedRedirect || '/';
                             
-                            // 重定向到最终URL
+                            console.log("使用Cookie中的重定向地址:", finalRedirect);
+                            
+                            // 清除Cookie中的重定向URL
+                            document.cookie = "redirectUrl=;path=/;max-age=0";
+                            
+                            // 重定向到指定页面
                             window.location.href = finalRedirect;
                         } else {
                             // Handle error

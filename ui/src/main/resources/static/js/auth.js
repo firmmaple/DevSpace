@@ -3,8 +3,8 @@
  */
 const AuthUtils = {
     /**
-     * Store user info in localStorage.
-     * Note: JWT token is now stored in HTTP-only cookie by the server.
+     * Store user info in cookie.
+     * Note: JWT token is stored in HTTP-only cookie by the server.
      * @param {Object} userInfo - User information object
      */
     setUserInfo: function(userInfo) {
@@ -13,26 +13,40 @@ const AuthUtils = {
             console.warn("AuthUtils: Attempting to store null or undefined user info");
             return;
         }
-        localStorage.setItem('user_info', JSON.stringify(userInfo));
+        const userInfoStr = JSON.stringify(userInfo);
+        // Store user info in a cookie that expires in 7 days (not HTTP-only to allow JS access)
+        // Adding path=/ ensures the cookie is available across the entire site
+        document.cookie = `user_info=${encodeURIComponent(userInfoStr)};path=/;max-age=604800`;
     },
 
     /**
-     * Get the user info from localStorage
+     * Get the user info from cookies
      * @returns {Object|null} The user info object or null if not found
      */
     getUserInfo: function() {
-        const userInfoStr = localStorage.getItem('user_info');
+        const cookies = document.cookie.split(';');
+        let userInfoStr = null;
+        
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith('user_info=')) {
+                userInfoStr = decodeURIComponent(cookie.substring('user_info='.length));
+                break;
+            }
+        }
+        
         const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
         console.log("AuthUtils: Getting user info", userInfo);
         return userInfo;
     },
 
     /**
-     * Remove user info from localStorage
+     * Remove user info from cookies
      */
     removeUserInfo: function() {
         console.log("AuthUtils: Removing user info");
-        localStorage.removeItem('user_info');
+        // Set expiration date to past to delete the cookie
+        document.cookie = "user_info=;path=/;max-age=0";
     },
 
     /**
@@ -54,7 +68,8 @@ const AuthUtils = {
             // 未登录错误码 (100_403_003)
           if (response.status.code === 100403003) {
             // 保存当前页面 URL，以便登录后返回
-            localStorage.setItem('redirectUrl', window.location.href);
+            const redirectUrl = window.location.href;
+            document.cookie = `redirectUrl=${encodeURIComponent(redirectUrl)};path=/`;
             // 重定向到登录页
             window.location.href = '/login';
             return Promise.reject(new Error('用户未登录'));
@@ -121,7 +136,7 @@ const AuthUtils = {
     },
 
     /**
-     * Update user information in localStorage after profile changes
+     * Update user information in cookie after profile changes
      * @param {Object} updatedProfile - Updated user profile information
      */
     updateUserInfo: function(updatedProfile) {
@@ -140,7 +155,7 @@ const AuthUtils = {
         };
         
         this.setUserInfo(newUserInfo);
-        console.log("User info updated in localStorage", newUserInfo);
+        console.log("User info updated in cookie", newUserInfo);
         
         // 触发自定义事件，通知header更新头像
         const userInfoUpdatedEvent = new CustomEvent('userInfoUpdated', {
@@ -154,6 +169,40 @@ const AuthUtils = {
             // 可以选择刷新页面或只更新特定UI元素
             // window.location.reload();
         }
+    },
+    
+    /**
+     * Get a specific cookie by name
+     * @param {string} name - Cookie name
+     * @returns {string|null} - Cookie value or null if not found
+     */
+    getCookie: function(name) {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith(name + '=')) {
+                return decodeURIComponent(cookie.substring(name.length + 1));
+            }
+        }
+        return null;
+    },
+    
+    /**
+     * Set a cookie with specified options
+     * @param {string} name - Cookie name
+     * @param {string} value - Cookie value
+     * @param {Object} options - Cookie options (path, max-age, etc.)
+     */
+    setCookie: function(name, value, options = {}) {
+        let cookieStr = `${name}=${encodeURIComponent(value)}`;
+        
+        if (options.path) cookieStr += `;path=${options.path}`;
+        if (options.maxAge) cookieStr += `;max-age=${options.maxAge}`;
+        if (options.domain) cookieStr += `;domain=${options.domain}`;
+        if (options.secure) cookieStr += `;secure`;
+        if (options.sameSite) cookieStr += `;samesite=${options.sameSite}`;
+        
+        document.cookie = cookieStr;
     }
 };
 
