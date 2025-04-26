@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Monitor cookie changes by periodically checking
     // (cookies don't trigger storage events like localStorage)
-    setInterval(updateAuthUI, 5000);
+    // setInterval(updateAuthUI, 5000);
     
     // 监听自定义事件，当用户信息更新时更新头像
     document.addEventListener('userInfoUpdated', function(e) {

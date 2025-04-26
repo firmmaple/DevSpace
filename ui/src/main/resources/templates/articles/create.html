@@ -1,64 +1,160 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <title>Create Article - DevSpace</title>
-    <!-- Rich Text Editor -->
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <title th:text="${article != null ? 'Edit Article' : 'Create Article'} + ' - DevSpace'">Article Editor</title>
+
+    <!-- Page-specific styles for the editor layout -->
+    <style>
+/* --- Styles ONLY for create/edit article page --- */
+
+/* Ensure the column containing the card stretches */
+/* The d-flex flex-column added in HTML is crucial */
+
+/* Make the card fill its container (.col-lg-12.d-flex.flex-column) */
+.card {
+    flex: 1;                /* Fill the available vertical space in the column */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;       /* Prevent content bursting out */
+    margin-bottom: 0 !important; /* Override default card margin */
+}
+
+/* Make card-body fill the card */
+.card-body {
+    flex: 1;                /* Fill the card */
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    overflow: hidden; /* Prevent internal elements from causing card overflow */
+}
+
+/* Make the form fill the card-body */
+#article-form {
+    flex: 1;                /* Fill the card-body */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent form elements from causing card-body overflow */
+    min-height: 0;    /* Important for nested flex containers */
+}
+
+/* Make the specific row with editor/preview take remaining space in the form */
+#article-form > .row.mb-3.g-md-4 {
+    flex: 1;                /* KEY: Row takes available vertical space */
+    min-height: 0;          /* Allow shrinking if form space is limited */
+    display: flex;          /* Arrange columns side-by-side */
+    flex-wrap: wrap;        /* Allow wrapping on small screens */
+    overflow-y: auto;       /* Allow this row to scroll if columns get too tall */
+}
+
+/* Make the columns inside that row handle vertical content */
+#article-form > .row.mb-3.g-md-4 > .col-md-6 {
+    display: flex;
+    flex-direction: column; /* Stack label and textarea/preview */
+    margin-bottom: 1rem;    /* Add some space below columns if they wrap */
+    min-height: 0;          /* Allow column to shrink if needed */
+}
+
+/* Finally, make the textarea and preview fill their column */
+#markdown-input,
+#html-preview {
+    flex-grow: 1;           /* Grow to fill column's flex space */
+    min-height: 400px;      /* Ensure a larger minimum usable size */
+    overflow-y: auto;       /* Add scrollbar if content overflows */
+    border: 1px solid #dee2e6; /* Ensure border consistency */
+    padding: 0.5rem;         /* Add some padding */
+    border-radius: 0.375rem; /* Match Bootstrap styling */
+}
+
+/* Specific styling for the preview area */
+#html-preview {
+    background-color: #f8f9fa;
+    padding: 1rem; /* Keep slightly larger padding for preview */
+}
+
+/* Editor validation styles */
+.is-invalid-editor {
+     border-color: #dc3545 !important;
+}
+.is-invalid-editor:focus {
+     box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+
+/* Ensure buttons at the bottom don't take flex space meant for editor row */
+#article-form > .d-flex.justify-content-between {
+    flex-shrink: 0; /* Prevent buttons div from shrinking */
+    margin-top: auto; /* Push buttons to bottom (redundant with form flex, but safe) */
+    padding-top: 1rem; /* Add some space above buttons */
+}
+    </style>
 </head>
 <body>
-    <!-- Content fragment to be injected into the main layout -->
+    <!-- Content Fragment -->
     <div th:fragment="content">
+        <!-- This outer div is the fragment root, matched by global CSS -->
+        <!-- The direct child row below is now targeted by the KEY FIX CSS -->
         <div class="row my-4">
-            <div class="col-lg-12">
+            <!-- col-lg-12 has d-flex flex-column, good -->
+            <div class="col-lg-12 d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 id="page-title">Create New Article</h1>
-                    <a href="/articles" class="btn btn-outline-secondary">
+                    <h1 id="page-title" th:text="${article != null ? 'Edit Article' : 'Create New Article'}">Create New Article</h1>
+                    <a th:href="@{/articles}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i> Back to Articles
                     </a>
                 </div>
-                
+
+                <!-- Card will fill the col-lg-12 -->
                 <div class="card">
+                    <!-- Card body will fill the card -->
                     <div class="card-body">
-                        <form id="article-form">
-                            <input type="hidden" id="article-id">
-                            
+                        <!-- Form will fill the card body -->
+                        <form id="article-form" novalidate>
+                            <input type="hidden" id="article-id" th:value="${article?.id}">
+
+                            <!-- Title input -->
                             <div class="mb-3">
                                 <label for="article-title" class="form-label">Title</label>
-                                <input type="text" class="form-control" id="article-title" placeholder="Enter article title" required>
+                                <input type="text" class="form-control" id="article-title" placeholder="Enter article title" required th:value="${article?.title}">
                                 <div class="invalid-feedback">Please enter a title for your article.</div>
                             </div>
-                            
-                            <div class="mb-3">
-                                <label for="article-summary" class="form-label">Summary</label>
-                                <textarea class="form-control" id="article-summary" rows="2" placeholder="Brief summary of your article"></textarea>
-                                <div class="form-text">A brief description that will be displayed in article listings.</div>
+
+                            <!-- Editor/Preview Row - Will take remaining space in form -->
+                            <div class="row mb-3 g-md-4">
+                                <!-- Editor Column -->
+                                <div class="col-md-6">
+                                    <label for="markdown-input" class="form-label">Content (Markdown)</label>
+                                    <!-- Textarea will grow via flex-grow -->
+                                    <textarea class="form-control" id="markdown-input" placeholder="Write your article here using Markdown..." required th:text="${article?.content}"></textarea>
+                                    <div class="invalid-feedback" id="content-feedback">Please enter content for your article (minimum 10 characters).</div>
+                                </div>
+                                <!-- Preview Column -->
+                                <div class="col-md-6">
+                                     <label class="form-label">Live Preview</label>
+                                     <!-- Preview div will grow via flex-grow -->
+                                     <div id="html-preview"></div>
+                                </div>
                             </div>
-                            
-                            <div class="mb-3">
-                                <label for="article-content" class="form-label">Content</label>
-                                <div id="editor-container" style="height: 400px;"></div>
-                                <input type="hidden" id="article-content">
-                                <div class="invalid-feedback" id="content-feedback">Please enter content for your article.</div>
-                            </div>
-                            
+
+                            <!-- Tags Input -->
                             <div class="mb-3">
                                 <label for="article-tags" class="form-label">Tags</label>
-                                <input type="text" class="form-control" id="article-tags" placeholder="Java, Spring, DevOps (comma separated)">
-                                <div class="form-text">Add tags to help readers discover your article.</div>
+                                <input type="text" class="form-control" id="article-tags" placeholder="Java, Spring, DevOps (comma separated)" th:value="${article?.tags != null ? #strings.listJoin(article.tags, ', ') : ''}">
+                                <div class="form-text">Add tags to help readers discover your article. Use comma (,) to separate tags.</div>
                             </div>
-                            
+
+                            <!-- Status Select -->
                             <div class="mb-3">
                                 <label for="article-status" class="form-label">Status</label>
                                 <select class="form-select" id="article-status">
-                                    <option value="1" selected>Publish Now</option>
-                                    <option value="0">Save as Draft</option>
+                                    <option value="1" th:selected="${article == null or article.status == 1}">Publish Now</option>
+                                    <option value="0" th:selected="${article != null and article.status == 0}">Save as Draft</option>
                                 </select>
                             </div>
-                            
-                            <div class="d-flex justify-content-between">
+
+                            <!-- Buttons - Pushed to bottom by mt-auto in flex form -->
+                            <div class="d-flex justify-content-between mt-auto pt-3">
                                 <button type="button" class="btn btn-secondary" id="cancel-button">Cancel</button>
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-1"></i> <span id="submit-text">Save Article</span>
+                                    <i class="fas fa-save me-1"></i> <span id="submit-text" th:text="${article != null ? 'Update Article' : 'Save Article'}">Save Article</span>
                                 </button>
                             </div>
                         </form>
@@ -66,254 +162,160 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Discard Changes Confirmation Modal -->
         <div class="modal fade" id="discardModal" tabindex="-1" aria-labelledby="discardModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="discardModalLabel">Discard Changes</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Are you sure you want to discard your changes? Any unsaved work will be lost.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Editing</button>
-                        <a href="/articles" class="btn btn-danger">Discard Changes</a>
-                    </div>
-                </div>
-            </div>
+            <!-- Modal content remains the same -->
+             <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header"> <h5 class="modal-title" id="discardModalLabel">Discard Changes</h5> <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> </div> <div class="modal-body"> <p>Are you sure you want to discard your changes? Any unsaved work will be lost.</p> </div> <div class="modal-footer"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Editing</button> <a th:href="@{/articles}" class="btn btn-danger">Discard Changes</a> </div> </div> </div>
         </div>
-    </div>
-    
-    <!-- Scripts fragment for this page -->
+    </div> <!-- End fragment content -->
+
+    <!-- Scripts Fragment -->
     <th:block th:fragment="scripts">
-        <!-- Rich Text Editor -->
-        <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-        
+        <!-- Markdown processing libraries -->
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/dompurify@2.3.10/dist/purify.min.js"></script>
+        <!-- Optional Syntax Highlighting -->
+        <!-- <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script> -->
+        <!-- <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css"> -->
+
+        <!-- Page-specific JavaScript logic -->
         <script th:inline="javascript">
+            /*<![CDATA[*/
+
+            // Assume AuthUtils is loaded globally via main.html's script includes
+            if (typeof AuthUtils === 'undefined') { console.error("CRITICAL: AuthUtils not found."); /* Handle error */ }
+
             document.addEventListener('DOMContentLoaded', function() {
-                // Helper function to get cookie by name
-                function getCookie(name) {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.startsWith(name + '=')) {
-                            return decodeURIComponent(cookie.substring(name.length + 1));
-                        }
-                    }
-                    return null;
-                }
-                
-                // Check if user is logged in
-                const userInfo = getCookie('user_info');
-                if (!userInfo) {
-                    // Redirect to login if not logged in
-                    window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-                    return;
-                }
-                
-                // Initialize Quill editor
-                const quill = new Quill('#editor-container', {
-                    modules: {
-                        toolbar: [
-                            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                            ['bold', 'italic', 'underline', 'strike'],
-                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                            [{ 'color': [] }, { 'background': [] }],
-                            [{ 'align': [] }],
-                            ['link', 'image', 'code-block'],
-                            ['clean']
-                        ]
-                    },
-                    placeholder: 'Write your article here...',
-                    theme: 'snow'
-                });
-                
-                // Form elements
+                // --- Login Check ---
+                const userInfo = AuthUtils.getUserInfo();
+                if (!userInfo) { console.warn("User not logged in, redirecting."); const redirectUrl = '/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search); window.location.href = redirectUrl; return; }
+                console.log("User logged in:", userInfo.username);
+
+                // --- Get Elements ---
                 const articleForm = document.getElementById('article-form');
-                const articleId = document.getElementById('article-id');
+                const articleIdInput = document.getElementById('article-id');
                 const titleInput = document.getElementById('article-title');
-                const summaryInput = document.getElementById('article-summary');
-                const contentInput = document.getElementById('article-content');
+                const markdownInput = document.getElementById('markdown-input');
+                const htmlPreview = document.getElementById('html-preview');
                 const tagsInput = document.getElementById('article-tags');
                 const statusSelect = document.getElementById('article-status');
                 const cancelButton = document.getElementById('cancel-button');
-                const pageTitle = document.getElementById('page-title');
                 const submitText = document.getElementById('submit-text');
-                
-                // Get article ID from URL for edit mode
-                const urlParts = window.location.pathname.split('/');
-                const isEditMode = urlParts.includes('edit');
-                let editId = null;
-                
-                if (isEditMode) {
-                    editId = urlParts[urlParts.length - 1];
-                    pageTitle.textContent = 'Edit Article';
-                    submitText.textContent = 'Update Article';
-                    
-                    // Load article data
-                    loadArticle(editId);
+                const contentFeedback = document.getElementById('content-feedback');
+
+                // --- Mode Detection ---
+                const editId = articleIdInput.value || null;
+                const isEditMode = !!editId;
+                console.log(`Editor mode: ${isEditMode ? 'Edit (ID: ' + editId + ')' : 'Create'}`);
+
+                let initialArticleData = {}; // For change detection
+
+                // --- Load or Init ---
+                if (isEditMode) { loadArticle(editId); }
+                else {
+                    updatePreview(); // Init preview
+                    initialArticleData = { title: '', content: '', tagsString: '', status: statusSelect.value };
                 }
-                
-                // Form submission
+
+                // --- Configure marked.js ---
+                marked.setOptions({ gfm: true, breaks: true });
+
+                // --- Live Preview ---
+                function updatePreview() {
+                    const rawHtml = marked.parse(markdownInput.value);
+                    htmlPreview.innerHTML = DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
+                }
+                markdownInput.addEventListener('input', updatePreview);
+
+                // --- Form Submission ---
                 articleForm.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    
-                    // Validate form
-                    if (!validateForm()) {
-                        return;
-                    }
-                    
-                    // Get editor content
-                    const editorContent = quill.root.innerHTML;
-                    contentInput.value = editorContent;
-                    
-                    // Prepare article data
-                    const articleData = {
-                        title: titleInput.value.trim(),
-                        summary: summaryInput.value.trim(),
-                        content: contentInput.value,
-                        status: parseInt(statusSelect.value)
-                    };
-                    
-                    // Add tags if provided
-                    if (tagsInput.value.trim()) {
-                        articleData.tags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
-                    }
-                    
-                    // Add ID for edit mode
-                    if (isEditMode) {
-                        articleData.id = editId;
-                    }
-                    
-                    // Save article
-                    saveArticle(articleData);
-                });
-                
-                // Cancel button
-                cancelButton.addEventListener('click', function() {
-                    // Show discard confirmation modal
-                    new bootstrap.Modal(document.getElementById('discardModal')).show();
-                });
-                
-                // Load article for editing
-                function loadArticle(id) {
-                    fetch(`/api/articles/${id}`, {
-                        credentials: 'include'  // Include cookies for authentication
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status.code === 0 && data.result) {
-                            const article = data.result;
-                            
-                            // Fill form fields
-                            articleId.value = article.id;
-                            titleInput.value = article.title || '';
-                            summaryInput.value = article.summary || '';
-                            
-                            // Set editor content
-                            quill.root.innerHTML = article.content || '';
-                            
-                            // Set tags
-                            if (article.tags && article.tags.length > 0) {
-                                tagsInput.value = article.tags.join(', ');
-                            }
-                            
-                            // Set status
-                            statusSelect.value = article.status || 1;
-                        } else {
-                            // Article not found or access denied
-                            showError('Unable to load article. It may have been deleted or you do not have permission to edit it.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading article:', error);
-                        showError('Error loading article. Please try again.');
-                    });
-                }
-                
-                // Save article
-                function saveArticle(articleData) {
-                    const url = isEditMode 
-                        ? `/api/articles/${editId}`
-                        : '/api/articles';
-                    
+                    if (!validateForm()) { showError("Please correct the errors."); const firstInvalid = articleForm.querySelector('.is-invalid'); if(firstInvalid) firstInvalid.focus(); return; }
+                    const articleData = { title: titleInput.value.trim(), content: markdownInput.value, status: parseInt(statusSelect.value, 10), tags: tagsInput.value.trim() ? tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag) : [] };
+                    const url = isEditMode ? `/api/articles/${editId}` : '/api/articles';
                     const method = isEditMode ? 'PUT' : 'POST';
-                    
-                    fetch(url, {
-                        method: method,
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        credentials: 'include',  // Include cookies for authentication
-                        body: JSON.stringify(articleData)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status.code === 0) {
-                            // Redirect to article detail page
-                            const newArticleId = isEditMode ? editId : data.result.id;
-                            window.location.href = `/articles/${newArticleId}`;
-                        } else {
-                            showError(data.status.msg || 'Error saving article. Please try again.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error saving article:', error);
-                        showError('Error saving article. Please try again.');
-                    });
+                    saveArticle(url, method, articleData, isEditMode, editId);
+                });
+
+                // --- Cancel Button ---
+                cancelButton.addEventListener('click', function() {
+                    const currentData = { title: titleInput.value, content: markdownInput.value, tagsString: tagsInput.value, status: statusSelect.value };
+                    if (JSON.stringify(currentData) !== JSON.stringify(initialArticleData)) {
+                        const discardModal = new bootstrap.Modal(document.getElementById('discardModal'));
+                        discardModal.show();
+                    } else { window.location.href = '/articles'; }
+                });
+
+                // --- Load Article ---
+                function loadArticle(id) {
+                    console.log(`Loading article ${id}...`);
+                    AuthUtils.authenticatedFetch(`/api/articles/${id}`)
+                        .then(data => {
+                            if (data.status.code === 0 && data.result) {
+                                const article = data.result;
+                                titleInput.value = article.title || '';
+                                markdownInput.value = article.content || '';
+                                tagsInput.value = (article.tags && article.tags.length > 0) ? article.tags.map(t => typeof t === 'object' ? t.name : t).join(', ') : '';
+                                statusSelect.value = String(article.status !== undefined ? article.status : 1);
+                                updatePreview();
+                                initialArticleData = { title: titleInput.value, content: markdownInput.value, tagsString: tagsInput.value, status: statusSelect.value };
+                            } else { console.error("Error loading article data:", data); showError(data.status.msg || 'Failed to load article.'); articleForm.querySelectorAll('input, textarea, select, button[type="submit"]').forEach(el => el.disabled = true); }
+                        })
+                        .catch(error => { console.error('Network error loading article:', error); showError('Error loading article: ' + (error.message || 'Network Error')); articleForm.querySelectorAll('input, textarea, select, button[type="submit"]').forEach(el => el.disabled = true); });
                 }
-                
-                // Validate form
+
+                // --- Save Article ---
+                function saveArticle(url, method, articleData, isEditing, currentId) {
+                    const submitButton = articleForm.querySelector('button[type="submit"]');
+                    const originalButtonHtml = submitButton.innerHTML;
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...`;
+                    clearErrors();
+                    console.log(`Sending ${method} to ${url}`);
+                    AuthUtils.authenticatedFetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(articleData) })
+                        .then(data => {
+                            if (data.status.code === 0) {
+                                const savedArticleId = isEditing ? currentId : (data.result ? data.result.id : null);
+                                if (savedArticleId) { window.location.href = `/articles/${savedArticleId}`; }
+                                else { console.error("No ID returned."); showError("Saved, but couldn't get ID. Redirecting..."); setTimeout(() => { window.location.href = '/articles'; }, 2500); }
+                            } else { let errorMsg = data.status.msg || 'Error saving.'; if (data.errors) { errorMsg += "<ul>"; for (const field in data.errors) { errorMsg += `<li>${field}: ${data.errors[field]}</li>`; } errorMsg += "</ul>"; } showError(errorMsg); }
+                        })
+                        .catch(error => { console.error('Network error saving:', error); showError('Error saving: ' + (error.message || 'Network/Server Error')); })
+                        .finally(() => { submitButton.disabled = false; submitButton.innerHTML = originalButtonHtml; });
+                }
+
+                // --- Validation ---
                 function validateForm() {
-                    let isValid = true;
-                    
-                    // Validate title
-                    if (!titleInput.value.trim()) {
-                        titleInput.classList.add('is-invalid');
-                        isValid = false;
-                    } else {
-                        titleInput.classList.remove('is-invalid');
-                    }
-                    
-                    // Validate content
-                    const contentText = quill.getText().trim();
-                    if (!contentText || contentText.length < 10) {
-                        document.querySelector('.ql-container').classList.add('border', 'border-danger');
-                        document.getElementById('content-feedback').style.display = 'block';
-                        isValid = false;
-                    } else {
-                        document.querySelector('.ql-container').classList.remove('border', 'border-danger');
-                        document.getElementById('content-feedback').style.display = 'none';
-                    }
-                    
+                    let isValid = true; clearErrors();
+                    if (!titleInput.value.trim()) { titleInput.classList.add('is-invalid'); isValid = false; } else { titleInput.classList.add('is-valid'); }
+                    const contentText = markdownInput.value.trim();
+                    if (!contentText || contentText.length < 10) { markdownInput.classList.add('is-invalid', 'is-invalid-editor'); contentFeedback.style.display = 'block'; isValid = false; } else { markdownInput.classList.add('is-valid'); contentFeedback.style.display = 'none'; }
                     return isValid;
                 }
-                
-                // Show error message
+
+                // --- Error Handling ---
                 function showError(message) {
-                    // Create alert
+                    clearErrors();
                     const alertDiv = document.createElement('div');
-                    alertDiv.classList.add('alert', 'alert-danger', 'alert-dismissible', 'fade', 'show', 'mb-4');
-                    alertDiv.innerHTML = `
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        ${message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    `;
-                    
-                    // Insert at the top of the form
+                    alertDiv.className = 'alert alert-danger alert-dismissible fade show mb-4';
+                    alertDiv.setAttribute('role', 'alert');
+                    alertDiv.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-exclamation-triangle flex-shrink-0 me-2"></i><div>${DOMPurify.sanitize(message, { USE_PROFILES: { html: true } })}</div></div><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
                     articleForm.prepend(alertDiv);
-                    
-                    // Auto dismiss after 5 seconds
-                    setTimeout(() => {
-                        alertDiv.classList.remove('show');
-                        setTimeout(() => alertDiv.remove(), 150);
-                    }, 5000);
+                    alertDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-            });
+                function clearErrors() {
+                    const existingAlert = articleForm.querySelector('.alert-danger');
+                    if (existingAlert) existingAlert.remove();
+                    articleForm.querySelectorAll('.is-invalid, .is-valid').forEach(el => { el.classList.remove('is-invalid', 'is-valid'); });
+                    markdownInput.classList.remove('is-invalid-editor');
+                    contentFeedback.style.display = 'none';
+                }
+
+            }); // End DOMContentLoaded
+            /*]]>*/
         </script>
     </th:block>
+
 </body>
-</html> 
+</html>

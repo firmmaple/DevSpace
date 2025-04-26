@@ -5,6 +5,7 @@ import org.jeffrey.api.exception.ResourceNotFoundException;
 import org.jeffrey.api.vo.Article.ArticleSummaryVO;
 import org.jeffrey.api.vo.Article.ArticleVO;
 import org.jeffrey.core.trace.TraceLog;
+import org.jeffrey.core.util.MarkdownUtil;
 import org.jeffrey.service.article.repository.entity.ArticleDO;
 import org.jeffrey.service.article.service.ArticleService;
 import org.jeffrey.service.article.repository.mapper.ArticleMapper;
@@ -213,7 +214,15 @@ public class ArticleServiceImpl implements ArticleService {
         vo.setId(articleDO.getId());
         vo.setTitle(articleDO.getTitle());
         vo.setSummary(articleDO.getSummary());
-        vo.setContent(articleDO.getContent());
+        
+        // 如果文章内容是Markdown格式，转换为HTML
+        String rawContent = articleDO.getContent();
+        String htmlContent = MarkdownUtil.convertToHtml(rawContent);
+        vo.setContent(htmlContent);
+        
+        // 保存原始Markdown内容（用于编辑）
+        vo.setRawContent(rawContent);
+        
         vo.setAuthorId(articleDO.getAuthorId());
         vo.setStatus(articleDO.getStatus());
         vo.setCreatedAt(articleDO.getCreatedAt());

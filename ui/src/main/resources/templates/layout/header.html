@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head th:fragment="headerFragment">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${title ?: 'DevSpace'}">DevSpace</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" th:href="@{/images/icon.png}">
     <!-- Bootstrap CSS -->
     <link th:href="@{https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css}" rel="stylesheet">
     <!-- Font Awesome for icons -->
     <link th:href="@{https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css}" rel="stylesheet">
-    <!-- Main CSS -->
-    <link th:href="@{/css/main.css}" rel="stylesheet">
-    <!-- Custom styles -->
+    <!-- Header CSS (Your existing specific header styles) -->
+    <!-- Removed link to header.css -->
+    <!-- Table of Contents Styling -->
+    <link th:href="@{/css/toc.css}" rel="stylesheet">
+
+    <!-- Global Layout & Component Styles -->
     <style>
         :root {
             --primary-color: #4a6cf7;
@@ -18,35 +24,56 @@
             --dark-color: #212529;
             --light-color: #f8f9fa;
         }
-        
+
+        /* --- 基本页面结构 (全局) --- */
+        html {
+            height: 100%;
+        }
+
         body {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif; /* Moved from header.css */
+            color: #333; /* Moved from header.css */
         }
-        
+
+        .main-content {
+            flex: 1;                /* 占据剩余空间 */
+            display: flex;          /* 使用 flex 布局 */
+            flex-direction: column; /* 垂直排列子元素 (container) */
+            padding: 2rem 0;
+        }
+
+        /* 让 main-content 里的 container 能撑开 (全局) */
+        .main-content > .container {
+            flex: 1;                /* 允许 container 填充 main-content */
+            display: flex;          /* 使用 flex 布局 */
+            flex-direction: column; /* 垂直排列子元素 (fragment 容器) */
+            width: 100%;            /* 确保 container 宽度正常 */
+        }
+
+
+        /* --- Header Specific Styles (Moved from header.css & consolidated) --- */
+
+        /* Navbar base styles */
         .navbar-brand {
             font-weight: 700;
             color: var(--primary-color);
             display: flex;
             align-items: center;
         }
-        
+
         .navbar-brand i {
             margin-right: 8px;
             font-size: 1.5rem;
         }
-        
-        .main-content {
-            flex: 1;
-            padding: 2rem 0;
-        }
-        
+
         .navbar .nav-link {
             position: relative;
             margin: 0 0.5rem;
         }
-        
+
         .navbar .nav-link:after {
             content: '';
             position: absolute;
@@ -57,34 +84,119 @@
             background-color: var(--primary-color);
             transition: width 0.3s ease;
         }
-        
+
         .navbar .nav-link:hover:after,
         .navbar .nav-link.active:after {
             width: 100%;
         }
-        
+
+        /* User menu and avatar */
         .user-avatar {
-            width: 32px;
-            height: 32px;
+            width: 36px; /* Specific style from header.css */
+            height: 36px;
             border-radius: 50%;
             background-color: var(--primary-color);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 500;
-            margin-right: 8px;
+            font-weight: bold; /* Specific style from header.css */
+            font-size: 1.2rem; /* Specific style from header.css */
+            margin-right: 10px; /* Specific style from header.css */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Specific style from header.css */
         }
+
+        .user-menu {
+            margin-left: 15px; /* from header.css */
+        }
+
+        #userMenuButton {
+            padding: 0.3rem 0.7rem; /* from header.css */
+            color: #333;
+            font-weight: 500;
+        }
+
+        .dropdown-menu {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* from header.css */
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 0.5rem;
+        }
+
+        .dropdown-item {
+            padding: 0.6rem 1rem; /* from header.css */
+            color: #495057;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa; /* from header.css */
+            color: var(--primary-color);
+        }
+
+        .dropdown-item i {
+            color: #6c757d; /* from header.css */
+        }
+
+        .dropdown-item:hover i {
+            color: var(--primary-color); /* from header.css */
+        }
+
+        /* Authentication buttons */
+        .auth-buttons .btn {
+            font-weight: 500; /* from header.css */
+            border-radius: 0.5rem;
+            padding: 0.4rem 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .auth-buttons .btn-outline-primary {
+            border-color: var(--primary-color); /* from header.css */
+            color: var(--primary-color);
+        }
+
+        .auth-buttons .btn-outline-primary:hover {
+            background-color: var(--primary-color); /* from header.css */
+            color: white;
+        }
+
+        .auth-buttons .btn-primary {
+            background-color: var(--primary-color); /* from header.css */
+            border-color: var(--primary-color);
+        }
+
+        .auth-buttons .btn-primary:hover {
+            background-color: var(--primary-hover); /* from header.css */
+            border-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(74, 108, 247, 0.2);
+        }
+
+        /* Admin link styling in header */
+        .admin-link a {
+            font-weight: bold; /* from header.css */
+            color: #dc3545; /* Red color to make admin link stand out */
+        }
+
+        .admin-link a:hover {
+            color: #a71d2a; /* from header.css */
+        }
+
+        /* Auth Hide/Show (Utility moved here for header context) */
+        .force-hide { display: none !important; }
+        .force-show { display: flex !important; }
+        .user-menu.force-show { display: flex !important; }
+
     </style>
 </head>
+
 <body>
+    <!-- Navigation Fragment -->
     <header th:fragment="navbar">
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
             <div class="container">
                 <a class="navbar-brand" th:href="@{/}">
                     <i class="fas fa-code"></i>DevSpace
                 </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" 
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
                         aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -113,7 +225,7 @@
                             <a class="nav-link" th:classappend="${currentPage == 'admin' ? 'active' : ''}" th:href="@{/admin}">管理后台</a>
                         </li>
                     </ul>
-                    
+
                     <!-- 搜索框 -->
                     <form class="d-flex me-2">
                         <div class="input-group">
@@ -123,12 +235,12 @@
                             </button>
                         </div>
                     </form>
-                    
+
                     <!-- User Menu (shown when authenticated) -->
                     <div class="d-flex align-items-center user-menu force-hide" id="userMenu">
                         <div class="user-avatar" id="userInitials"></div>
                         <div class="dropdown">
-                            <button class="btn dropdown-toggle" type="button" id="userMenuButton" 
+                            <button class="btn dropdown-toggle" type="button" id="userMenuButton"
                                     data-bs-toggle="dropdown" aria-expanded="false">
                                 <span id="username">User</span>
                             </button>
@@ -142,7 +254,7 @@
                             </ul>
                         </div>
                     </div>
-                    
+
                     <!-- Login/Register buttons (shown when not authenticated) -->
                     <div class="d-flex gap-2 auth-buttons force-show" id="authButtons">
                         <a th:href="@{/login}" class="btn btn-outline-primary">登录</a>
@@ -153,4 +265,4 @@
         </nav>
     </header>
 </body>
-</html> 
+</html>

@@ -179,13 +179,15 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
 2. **文章详情**
    - 完整展示文章内容
    - 作者信息展示
+   - 文章目录导航（自动生成章节目录）
    - 文章互动功能（点赞、收藏、评论）
    - 相关文章推荐
    - 标签展示和导航
 
 3. **文章创建与编辑**
-   - 富文本编辑器（集成Quill编辑器）
-   - 文章标题、摘要、内容和标签管理
+   - Markdown编辑器（使用 [marked.js](https://marked.js.org/) + [DOMPurify](https://github.com/cure53/DOMPurify) 实现实时预览）
+   - 文章标题、内容和标签管理
+   - 摘要将自动生成（从内容提取），无需手动输入
    - 草稿保存功能
    - 表单验证
 
@@ -200,8 +202,8 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
    - 使用Thymeleaf模板引擎渲染页面
    - JavaScript动态加载和渲染内容
    - Fetch API进行前后端数据交互
-   - Quill富文本编辑器处理文章内容
-   - HTML/JavaScript 分离 (`article/detail.js` 用于详情页逻辑)
+   - 使用 marked.js + DOMPurify 处理 Markdown 内容及预览
+   - HTML/JavaScript 分离 (`article/detail.js` 用于详情页逻辑, `create.html` 内嵌脚本用于创建/编辑页)
 
 2. **后端实现**:
    - `ArticleController` 处理页面路由
@@ -212,8 +214,8 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
 3. **数据模型**:
    - `ArticleVO` 视图对象展示文章详情
    - `ArticleSummaryVO` 视图对象展示文章摘要
-   - `ArticleCreateDTO` 数据传输对象处理文章创建
-   - `ArticleUpdateDTO` 数据传输对象处理文章更新
+   - `ArticleCreateDTO` 数据传输对象处理文章创建 (不含 `summary`)
+   - `ArticleUpdateDTO` 数据传输对象处理文章更新 (不含 `summary`)
 
 ### 代码位置
 

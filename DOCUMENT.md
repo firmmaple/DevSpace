@@ -227,7 +227,6 @@ public class UserVO implements Serializable {
 // 文章创建DTO
 public class ArticleCreateDTO implements Serializable {
     private String title;        // 文章标题
-    private String summary;      // 文章摘要
     private String content;      // 文章内容
     private List<String> tags;   // 文章标签
     private Integer status;      // 文章状态，1-已发布，0-草稿
@@ -236,7 +235,6 @@ public class ArticleCreateDTO implements Serializable {
 // 文章更新DTO
 public class ArticleUpdateDTO implements Serializable {
     private String title;        // 文章标题
-    private String summary;      // 文章摘要
     private String content;      // 文章内容
     private List<String> tags;   // 文章标签
     private Integer status;      // 文章状态
@@ -291,7 +289,7 @@ public class UserUpdateDTO implements Serializable {
         - **Side Effect**: 更新用户数据库中的 `avatarUrl`。
 ## 3.3 文章接口 (`/api/articles`)
     - `GET /api/articles`: 获取文章列表 (分页)
-        - Parameters: 
+        - Parameters:
             - `pageNum` (int): 页码，默认1
             - `pageSize` (int): 每页数量，默认10
             - `authorId` (Long, optional): 按作者筛选
@@ -300,35 +298,35 @@ public class UserUpdateDTO implements Serializable {
             - `keyword` (String, optional): 按标题或内容搜索
         - Response: `ResVo<IPage<ArticleSummaryVO>>`
     - `GET /api/articles/{id}`: 获取文章详情
-        - Parameters: 
+        - Parameters:
             - `id` (Long): 文章ID (字符串形式)
         - Response: `ResVo<ArticleVO>`
     - `POST /api/articles`: 创建文章
-        - Request Body: `ArticleCreateDTO`
+        - Request Body: `ArticleCreateDTO` (不包含 `summary`)
         - Response: `ResVo<ArticleVO>`
     - `PUT /api/articles/{id}`: 更新文章
-        - Parameters: 
+        - Parameters:
             - `id` (Long): 文章ID (字符串形式)
-        - Request Body: `ArticleUpdateDTO`
+        - Request Body: `ArticleUpdateDTO` (不包含 `summary`)
         - Response: `ResVo<ArticleVO>`
     - `DELETE /api/articles/{id}`: 删除文章
-        - Parameters: 
+        - Parameters:
             - `id` (Long): 文章ID (字符串形式)
         - Response: `ResVo<String>`
     - `POST /api/articles/{id}/like`: 点赞文章
-        - Parameters: 
+        - Parameters:
             - `id` (Long): 文章ID (字符串形式)
         - Response: `ResVo<Void>`
     - `DELETE /api/articles/{id}/like`: 取消点赞
-        - Parameters: 
+        - Parameters:
             - `id` (Long): 文章ID (字符串形式)
         - Response: `ResVo<Void>`
     - `POST /api/articles/{id}/collect`: 收藏文章
-        - Parameters: 
+        - Parameters:
             - `id` (Long): 文章ID (字符串形式)
         - Response: `ResVo<Void>`
     - `DELETE /api/articles/{id}/collect`: 取消收藏
-        - Parameters: 
+        - Parameters:
             - `id` (Long): 文章ID (字符串形式)
         - Response: `ResVo<Void>`
 ## 3.4 评论接口 (`/api/comments`)
@@ -336,13 +334,13 @@ public class UserUpdateDTO implements Serializable {
         - Request Body: `CommentCreateDTO` (包含 `articleId`, `content`, `parentId`)
         - Response: `ResVo<CommentVO>` (包含新评论信息)
     - `GET /api/comments/article/{articleId}`: 获取文章的评论列表 (包含嵌套回复和用户头像)
-        - Parameters: 
+        - Parameters:
             - `articleId` (Long): 文章ID (字符串形式)
             - `pageNum` (int): 页码，默认1
             - `pageSize` (int): 每页数量，默认50
         - Response: `ResVo<IPage<CommentVO>>`
     - `DELETE /api/comments/{id}`: 删除评论 (仅作者或管理员)
-        - Parameters: 
+        - Parameters:
             - `id` (Long): 评论ID (字符串形式)
         - Response: `ResVo<String>`
 ## 3.5 文件访问接口 (`/api/file`)
@@ -367,7 +365,7 @@ public class UserUpdateDTO implements Serializable {
 - **文章表 (`t_article`)**
     - `id` (BIGINT, PK)
     - `title` (VARCHAR) - 文章标题
-    - `summary` (VARCHAR) - 文章摘要
+    - `summary` (VARCHAR) - 文章摘要 (由后端根据内容自动生成)
     - `content` (TEXT) - 文章内容
     - `author_id` (BIGINT, FK) - 作者ID，关联用户表
     - `status` (TINYINT) - 状态，1-已发布，0-草稿
@@ -676,3 +674,31 @@ DevSpace 实现了一个可扩展的嵌套评论系统，其前端逻辑主要�
 - **缓存 DOM 引用**：减少重复的 `document.getElementById` 或 `querySelector` 调用。
 - **错误处理**：增强了 API 调用失败时的错误处理和用户反馈。
 - **条件检查**: 增加了对空值和边界情况的检查。
+
+## 8.3 文章目录导航 (TOC) 实现
+
+DevSpace 实现了一个动态生成的文章目录导航功能，用于提升长文章的阅读体验。
+
+### 8.3.1 功能概述
+
+- **自动生成**：基于文章内容中的标题标签（h1-h6）自动生成结构化目录。
+- **导航定位**：点击目录项可平滑滚动到对应的文章章节。
+- **响应式设计**：在大屏幕设备上在侧边栏显示，小屏幕设备上提供可折叠的内联目录。
+- **当前位置指示**：滚动阅读时自动高亮当前阅读的章节目录项。
+
+### 8.3.2 技术实现
+
+- **前端逻辑**：在 `article/detail.js` 中实现了 TOC 的动态生成和交互控制。
+- **DOM 结构**：TOC 容器添加在文章侧边栏中，作者信息卡片下方。
+- **事件监听**：使用 `IntersectionObserver` API 监测阅读位置，更新当前目录项高亮状态。
+- **平滑滚动**：使用 `scrollIntoView({ behavior: 'smooth' })` 实现点击目录项后的平滑滚动。
+- **响应式适配**：根据屏幕大小动态调整 TOC 的显示方式和位置。
+
+### 8.3.3 实现细节
+
+- **标题解析**：递归处理文章中的 h1-h6 标签，生成嵌套层级的目录结构。
+- **唯一标识**：为文章中没有 id 的标题元素自动添加唯一标识，以支持锚点导航。
+- **目录层级**：支持多达六级的目录层级结构，使用适当的缩进和样式区分不同级别。
+- **动态更新**：仅在页面初始加载时生成目录，无需在阅读过程中重新计算。
+- **小屏适配**：在移动设备上提供内联折叠式目录，点击后展开，再次点击折叠。
+- **交互优化**：添加了目录项的悬停效果和当前位置指示，提升用户体验。

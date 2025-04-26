@@ -9,6 +9,6 @@ import org.springframework.stereotype.Component;
 public class UserDoToUserInfoConverter implements Converter<UserDO, UserDTO> {
     @Override
     public UserDTO convert(UserDO userDO) {
-        return new UserDTO(userDO.getId(), userDO.getUsername(), userDO.getPassword(), userDO.getIsAdmin());
+        return new UserDTO(userDO.getId(), userDO.getUsername(), userDO.getPassword(), userDO.getIsAdmin(), userDO.getAvatarUrl());
     }
 }

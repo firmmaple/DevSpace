@@ -14,7 +14,8 @@ public class ArticleVO implements Serializable { // For detailed view
     private Long id;
     private String title;
     private String summary;
-    private String content; // Include content for detail view
+    private String content; // HTML content for display
+    private String rawContent; // Original Markdown content for editing
     @JsonSerialize(using = ToStringSerializer.class)
     private Long authorId;
     private String authorUsername; // Populate this in the service layer

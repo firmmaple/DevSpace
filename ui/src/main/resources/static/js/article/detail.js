@@ -249,103 +249,103 @@ function loadArticleDetails() {
                 const authorNameElement = document.getElementById('author-name');
                 const authorAvatarElement = document.getElementById('author-avatar');
                 const dateElement = document.getElementById('article-date');
+                const tagsElement = document.getElementById('article-tags');
                 const viewsElement = document.getElementById('article-views');
                 const likesElement = document.getElementById('article-likes');
                 const collectsElement = document.getElementById('article-collects');
                 
-                if (titleElement) titleElement.textContent = article.title;
-                if (contentElement) contentElement.innerHTML = article.content;
+                // 直接设置HTML内容，不需要转换
+                if (titleElement) titleElement.textContent = article.title || 'Untitled';
+                if (contentElement) contentElement.innerHTML = article.content || '';
                 if (authorNameElement) authorNameElement.textContent = article.authorUsername || 'Unknown';
+                if (dateElement) dateElement.textContent = formatDate(article.createdAt);
+                
+                // Set avatar with fallback
                 if (authorAvatarElement) {
                     authorAvatarElement.src = article.authorAvatarUrl || 'https://via.placeholder.com/40';
                     authorAvatarElement.alt = article.authorUsername || 'Author';
                 }
-                if (dateElement) dateElement.textContent = formatDate(article.createdAt);
-                if (viewsElement) viewsElement.textContent = article.viewCount || 0;
-                if (likesElement) likesElement.textContent = article.likeCount || 0;
-                if (collectsElement) collectsElement.textContent = article.collectCount || 0;
                 
-                // Populate tags
-                const tagsContainer = document.getElementById('article-tags');
-                if (tagsContainer && article.tags && article.tags.length > 0) {
-                    tagsContainer.innerHTML = '';
+                // Set counters
+                if (viewsElement) viewsElement.textContent = article.viewCount || '0';
+                if (likesElement) likesElement.textContent = article.likeCount || '0';
+                if (collectsElement) collectsElement.textContent = article.collectCount || '0';
+                
+                // Render tags
+                if (tagsElement && article.tags && article.tags.length > 0) {
+                    tagsElement.innerHTML = '';
                     article.tags.forEach(tag => {
-                        const tagElement = document.createElement('a');
-                        tagElement.classList.add('badge', 'bg-secondary', 'me-1', 'text-decoration-none');
-                        tagElement.href = `/articles?tag=${tag}`;
-                        tagElement.textContent = tag;
-                        tagsContainer.appendChild(tagElement);
+                        const tagBadge = document.createElement('span');
+                        tagBadge.className = 'badge bg-secondary me-1';
+                        tagBadge.textContent = tag;
+                        tagsElement.appendChild(tagBadge);
                     });
                 }
                 
-                // Update Meta tags
-                document.title = article.title + ' - DevSpace';
-                const metaDescription = document.querySelector('meta[name="description"]');
-                if (metaDescription) {
-                    metaDescription.setAttribute('content', article.summary || article.title);
-                }
+                // Author card if exists
+                const authorCardElement = document.getElementById('author-card');
+                const authorCardAvatarElement = document.getElementById('author-card-avatar');
+                const authorCardNameElement = document.getElementById('author-card-name');
+                const authorCardBioElement = document.getElementById('author-card-bio');
+                const authorCardProfileElement = document.getElementById('author-card-profile');
                 
-                // Populate author card
-                const authorCard = document.getElementById('author-card');
-                const authorCardAvatar = document.getElementById('author-card-avatar');
-                const authorCardName = document.getElementById('author-card-name');
-                const authorCardBio = document.getElementById('author-card-bio');
-                const authorCardProfile = document.getElementById('author-card-profile');
-                
-                if (authorCard) {
-                    // Show author card
-                    authorCard.classList.remove('d-none');
+                if (authorCardElement) {
+                    authorCardElement.classList.remove('d-none');
                     
-                    // Populate author card details with data from API
-                    if (authorCardName) {
-                        authorCardName.textContent = article.authorUsername || 'Unknown';
+                    if (authorCardAvatarElement) {
+                        authorCardAvatarElement.src = article.authorAvatarUrl || 'https://via.placeholder.com/100';
+                        authorCardAvatarElement.alt = article.authorUsername || 'Author';
                     }
                     
-                    if (authorCardAvatar) {
-                        authorCardAvatar.src = article.authorAvatarUrl || 'https://via.placeholder.com/100';
-                        authorCardAvatar.alt = article.authorUsername || 'Author';
+                    if (authorCardNameElement) {
+                        authorCardNameElement.textContent = article.authorUsername || 'Unknown';
                     }
                     
-                    if (authorCardBio) {
-                        authorCardBio.textContent = article.authorBio || 'No bio available';
+                    if (authorCardBioElement) {
+                        authorCardBioElement.textContent = article.authorBio || 'No bio available';
                     }
                     
-                    if (authorCardProfile && article.authorId) {
-                        authorCardProfile.href = `/users/${article.authorId}`;
+                    if (authorCardProfileElement) {
+                        authorCardProfileElement.href = `/profile/${article.authorId}`;
                     }
                 }
                 
-                // Show article
+                // Show article container
                 articleContainer.classList.remove('d-none');
                 
-                // Set author actions
-                if (currentUser && currentUser.sub == article.authorId) {
-                    isAuthor = true;
-                    if (authorActions) authorActions.classList.remove('d-none');
+                // Check if current user is the author
+                if (currentUser && currentUser.id && article.authorId) {
+                    isAuthor = currentUser.id == article.authorId;
                     
-                    // Update edit button href
+                    if (isAuthor && authorActions) {
+                        authorActions.classList.remove('d-none');
+                    
+                        // Set edit button href
                     const editButton = document.getElementById('edit-button');
                     if (editButton) {
-                        editButton.href = `/articles/edit/${articleId}`;
+                            editButton.href = `/articles/edit/${article.id}`;
+                        }
                     }
                 }
                 
-                // Set interaction states
+                // Set like and collect status
                 isLiked = article.likedByCurrentUser || false;
                 isCollected = article.collectedByCurrentUser || false;
-                
-                // Update UI states
                 updateLikeUI();
                 updateCollectUI();
                 
                 // Load related articles based on tags
                 if (article.tags && article.tags.length > 0) {
                     loadRelatedArticles(article.tags);
-                } else {
-                    loadRelatedArticles(); // Load default related articles
+                }
+                
+                // Update comment count display
+                const commentCountElement = document.getElementById('comment-count');
+                if (commentCountElement) {
+                    commentCountElement.textContent = article.commentCount || '0';
                 }
             } else {
-                // Article not found
+                // Article not found or error
                 if (articleNotFound) {
                     articleNotFound.classList.remove('d-none');
                 }

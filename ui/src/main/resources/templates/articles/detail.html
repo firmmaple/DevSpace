@@ -143,6 +143,33 @@
                     </div>
                 </div>
                 
+                <!-- Table of Contents -->
+                <div id="table-of-contents" class="card mb-4 d-none">
+                    <div class="card-header">
+                        <div class="toc-header">
+                            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Table of Contents</h5>
+                            <button class="toc-toggle" id="toc-toggle" aria-expanded="true" title="Toggle table of contents">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="toc-container" class="list-group list-group-flush">
+                            <!-- Will be populated by JS -->
+                            <div class="list-group-item text-center py-3" id="toc-loading">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading table of contents...</span>
+                                </div>
+                                <span class="ms-2">Generating TOC...</span>
+                            </div>
+                            <div class="list-group-item text-center py-3 d-none" id="toc-empty">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <span>No headings found in this article.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Related Articles -->
                 <div class="card mb-4">
                     <div class="card-header">
@@ -202,6 +229,7 @@
     <!-- Scripts fragment for this page -->
     <th:block th:fragment="scripts">
         <script th:src="@{/js/article/detail.js}"></script>
+        <script th:src="@{/js/article/toc.js}"></script>
     </th:block>
 </body>
 </html> 

@@ -14,7 +14,7 @@ CREATE TABLE `user` (
 
 INSERT INTO `user` (`id`, `username`, `password`, `is_admin`) VALUES (1, 'admin', '123', 1);
 INSERT INTO `user` (`id`, `username`, `password`, `avatar_url`, `bio`, `is_admin`) VALUES (2, 'meat', '123456', 'http://localhost:8088/api/file/avatars/White-Maltese.jpg', 'I am a meat', 1);
-INSERT INTO `user` (`id`, `username`, `password`, `avatar_url`, `bio`, `is_admin`) VALUES (3, 'jeffrey', '123', 'http://localhost:8088/api/file/avatars/Gloden-Maltese.jpg', '喜欢捡垃圾！', 1);
+INSERT INTO `user` (`id`, `username`, `password`, `avatar_url`, `bio`, `is_admin`) VALUES (3, 'jeffrey', '123', 'http://localhost:8088/api/file/avatars/Golden-Maltese.jpg', '喜欢捡垃圾！', 1);
 INSERT INTO `user` (`id`, `username`, `password`, `is_admin`) VALUES (4, 'user', '123', 0);
 
 CREATE TABLE `article` (

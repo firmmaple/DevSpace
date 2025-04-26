@@ -1,0 +1,98 @@
+/* Table of Contents styling */
+.toc-link {
+    display: block;
+    padding: 0.3rem 0.8rem;
+    text-decoration: none;
+    color: #495057;
+    border-left: 2px solid transparent;
+    transition: all 0.2s ease;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.25;
+    margin-bottom: 1px;
+    font-size: 0.9rem;
+    overflow: visible;
+}
+
+.toc-link:hover {
+    background-color: #f8f9fa;
+    color: #0d6efd;
+    border-left-color: #0d6efd;
+}
+
+.toc-link.active {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    border-left-color: #0d6efd;
+    font-weight: 500;
+}
+
+/* Indentation for different heading levels */
+.toc-h1 {
+    padding-left: 0.7rem;
+    font-weight: 600;
+}
+
+.toc-h2 {
+    padding-left: 1.2rem;
+    font-weight: 500;
+}
+
+.toc-h3 {
+    padding-left: 1.7rem;
+    font-size: 0.85rem;
+}
+
+.toc-h4 {
+    padding-left: 2.2rem;
+    font-size: 0.8rem;
+}
+
+.toc-h5, .toc-h6 {
+    padding-left: 2.7rem;
+    font-size: 0.75rem;
+}
+
+/* Remove sticky positioning - as requested */
+.toc-sticky {
+    position: static;
+}
+
+/* Show full TOC without scrolling */
+#toc-container {
+    transition: max-height 0.3s ease;
+    padding-right: 5px;
+}
+
+/* Collapsed state */
+#toc-container.collapsed {
+    max-height: 0;
+    overflow: hidden;
+}
+
+/* Toggle button styling */
+.toc-toggle {
+    background: none;
+    border: none;
+    color: #495057;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    padding: 0;
+}
+
+.toc-toggle.collapsed {
+    transform: rotate(-90deg);
+}
+
+/* Card header right alignment for toggle */
+.toc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+/* More compact card body */
+#table-of-contents .card-body {
+    padding: 0.5rem 0 !important;
+} 
