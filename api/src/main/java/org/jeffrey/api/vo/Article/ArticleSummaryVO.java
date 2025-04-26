@@ -25,4 +25,6 @@ public class ArticleSummaryVO { // For list view
     private Long likeCount;
     @JsonSerialize(using = ToStringSerializer.class)
     private Long collectCount;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long commentCount;
 }

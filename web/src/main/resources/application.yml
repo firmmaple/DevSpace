@@ -15,6 +15,9 @@ spring:
     livereload:
       enabled: true
 
+  elasticsearch:
+    uris: localhost:9200
+
   # RabbitMQ Configuration
   rabbitmq:
     host: localhost
@@ -36,6 +39,15 @@ spring:
         concurrency: 3
         # Maximum number of concurrent consumers
         max-concurrency: 10
+
+  data:
+    elasticsearch:
+      repositories:
+        enabled: true
+
+elasticsearch:
+  index:
+    auto-create: true
 
 app:
   file:

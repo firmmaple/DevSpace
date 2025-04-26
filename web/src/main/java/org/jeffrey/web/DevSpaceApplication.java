@@ -6,9 +6,11 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.SpringApplication;
+import org.springframework.context.annotation.ComponentScan;
 
 @Slf4j
 @SpringBootApplication
+@ComponentScan(basePackages = {"org.jeffrey.web", "org.jeffrey.core", "org.jeffrey.service"})
 public class DevSpaceApplication implements ApplicationRunner {
     @Value("${server.port:8080}")
     private Integer webPort;

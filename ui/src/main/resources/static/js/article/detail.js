@@ -75,6 +75,15 @@ function setupInteractionButtons() {
     const likeButton = document.getElementById('like-button');
     const collectButton = document.getElementById('collect-button');
     
+    // 初始化按钮状态记录
+    if (likeButton) {
+        likeButton.dataset.wasLiked = 'false';
+    }
+    
+    if (collectButton) {
+        collectButton.dataset.wasCollected = 'false';
+    }
+    
     // Handle like button click
     if (likeButton) {
         likeButton.addEventListener('click', function() {
@@ -82,6 +91,9 @@ function setupInteractionButtons() {
                 window.location.href = '/login?redirect=' + encodeURIComponent(window.location.href);
                 return;
             }
+            
+            // 记录之前的状态
+            likeButton.dataset.wasLiked = isLiked.toString();
             
             // Toggle like state optimistically
             isLiked = !isLiked;
@@ -115,6 +127,9 @@ function setupInteractionButtons() {
                 window.location.href = '/login?redirect=' + encodeURIComponent(window.location.href);
                 return;
             }
+            
+            // 记录之前的状态
+            collectButton.dataset.wasCollected = isCollected.toString();
             
             // Toggle collect state optimistically
             isCollected = !isCollected;
@@ -156,12 +171,33 @@ function updateLikeUI() {
         likeButton.classList.remove('btn-outline-danger');
         likeIcon.className = 'fas fa-heart me-1';
         likeText.textContent = 'Liked';
+        
+        // 更新点赞计数
+        if (likeCount) {
+            const currentCount = parseInt(likeCount.textContent || '0');
+            // 如果之前没有点赞，现在点赞了，计数+1
+            if (likeButton.dataset.wasLiked === 'false') {
+                likeCount.textContent = (currentCount + 1).toString();
+            }
+        }
     } else {
         likeButton.classList.remove('btn-danger');
         likeButton.classList.add('btn-outline-danger');
         likeIcon.className = 'far fa-heart me-1';
         likeText.textContent = 'Like';
+        
+        // 更新点赞计数
+        if (likeCount) {
+            const currentCount = parseInt(likeCount.textContent || '0');
+            // 如果之前点赞了，现在取消了，计数-1（但确保不小于0）
+            if (likeButton.dataset.wasLiked === 'true') {
+                likeCount.textContent = Math.max(0, currentCount - 1).toString();
+            }
+        }
     }
+    
+    // 记录当前点赞状态用于下次比较
+    likeButton.dataset.wasLiked = isLiked.toString();
 }
 
 // Update UI for collect button
@@ -171,18 +207,40 @@ function updateCollectUI() {
     
     const collectIcon = collectButton.querySelector('i');
     const collectText = collectButton.querySelector('span');
+    const collectCount = document.getElementById('article-collects');
     
     if (isCollected) {
         collectButton.classList.add('btn-warning');
         collectButton.classList.remove('btn-outline-warning');
         collectIcon.className = 'fas fa-bookmark me-1';
         collectText.textContent = 'Collected';
+        
+        // 更新收藏计数
+        if (collectCount) {
+            const currentCount = parseInt(collectCount.textContent || '0');
+            // 如果之前没有收藏，现在收藏了，计数+1
+            if (collectButton.dataset.wasCollected === 'false') {
+                collectCount.textContent = (currentCount + 1).toString();
+            }
+        }
     } else {
         collectButton.classList.remove('btn-warning');
         collectButton.classList.add('btn-outline-warning');
         collectIcon.className = 'far fa-bookmark me-1';
         collectText.textContent = 'Collect';
+        
+        // 更新收藏计数
+        if (collectCount) {
+            const currentCount = parseInt(collectCount.textContent || '0');
+            // 如果之前收藏了，现在取消了，计数-1（但确保不小于0）
+            if (collectButton.dataset.wasCollected === 'true') {
+                collectCount.textContent = Math.max(0, currentCount - 1).toString();
+            }
+        }
     }
+    
+    // 记录当前收藏状态用于下次比较
+    collectButton.dataset.wasCollected = isCollected.toString();
 }
 
 // Check if user is authenticated
@@ -265,6 +323,10 @@ function loadArticleDetails() {
                     authorAvatarElement.src = article.authorAvatarUrl || 'https://via.placeholder.com/40';
                     authorAvatarElement.alt = article.authorUsername || 'Author';
                 }
+                if (dateElement) dateElement.textContent = formatDate(article.createdAt);
+                if (viewsElement) viewsElement.textContent = article.viewCount || 0;
+                if (likesElement) likesElement.textContent = article.likeCount || 0;
+                if (collectsElement) collectsElement.textContent = article.collectCount || 0;
                 
                 // Set counters
                 if (viewsElement) viewsElement.textContent = article.viewCount || '0';
@@ -331,6 +393,19 @@ function loadArticleDetails() {
                 // Set like and collect status
                 isLiked = article.likedByCurrentUser || false;
                 isCollected = article.collectedByCurrentUser || false;
+                
+                // 初始化按钮初始状态
+                const likeButton = document.getElementById('like-button');
+                if (likeButton) {
+                    likeButton.dataset.wasLiked = isLiked.toString();
+                }
+                
+                const collectButton = document.getElementById('collect-button');
+                if (collectButton) {
+                    collectButton.dataset.wasCollected = isCollected.toString();
+                }
+                
+                // Update UI states
                 updateLikeUI();
                 updateCollectUI();
                 

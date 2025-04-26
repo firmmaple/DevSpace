@@ -10,9 +10,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const logoutButton = document.getElementById('logoutButton');
     const adminNavLink = document.getElementById('adminNavLink');
     
+    // 搜索表单处理
+    const headerSearchForm = document.getElementById('headerSearchForm');
+    const headerSearchInput = document.getElementById('headerSearchInput');
+    
+    if (headerSearchForm) {
+        headerSearchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const keyword = headerSearchInput.value.trim();
+            
+            if (keyword) {
+                // 跳转到文章列表页面并添加搜索参数
+                window.location.href = `/articles?keyword=${encodeURIComponent(keyword)}`;
+            } else {
+                // 如果搜索内容为空，直接访问文章列表页
+                window.location.href = '/articles';
+            }
+        });
+    }
+
     // Debug - check if AuthUtils is loaded
     console.log("Header.js - AuthUtils available:", window.AuthUtils ? "Yes" : "No");
-    
+
     // Helper function to get cookie by name
     function getCookie(name) {
         const cookies = document.cookie.split(';');
@@ -24,16 +43,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return null;
     }
-    
+
     // Check if user is authenticated
     function updateAuthUI() {
         // Use AuthUtils if available, otherwise check cookie directly
-        const isAuthenticated = window.AuthUtils ? 
-            AuthUtils.isAuthenticated() : 
+        const isAuthenticated = window.AuthUtils ?
+            AuthUtils.isAuthenticated() :
             !!getCookie('user_info');
-            
-        console.log("Header updateAuthUI - Auth status:", isAuthenticated);    
-        
+
+        console.log("Header updateAuthUI - Auth status:", isAuthenticated);
+
         if (isAuthenticated) {
             // User is authenticated - show user menu
             if (userMenu) {
@@ -44,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 authButtons.classList.add('force-hide');
                 authButtons.classList.remove('force-show');
             }
-            
+
             // Get user info
             let userInfo;
             if (window.AuthUtils) {
@@ -53,15 +72,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const userInfoStr = getCookie('user_info');
                 userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
             }
-            
+
             // Log user info for debugging
             console.log("Header - User info:", userInfo);
-            
+
             // Update username display
             if (userInfo && userInfo.username && usernameElement) {
                 usernameElement.textContent = userInfo.username;
             }
-            
+
             // Show admin link only if user is admin
             if (userInfo && userInfo.isAdmin === true && adminNavLink) {
                 adminNavLink.classList.add('force-show');
@@ -71,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 adminNavLink.classList.add('force-hide');
                 adminNavLink.classList.remove('force-show');
             }
-            
+
             // Update user avatar
             updateUserAvatar(userInfo);
         } else {
@@ -86,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     // Update user avatar based on user info
     function updateUserAvatar(userInfo) {
         console.log("updateUserAvatar - userInfo:", userInfo);
@@ -94,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (userInfo.avatarUrl) {
                 // 用户有头像，显示头像图片
                 console.log("Setting user avatar:", userInfo.avatarUrl);
-                
+
                 // 检查是否已存在头像图片
                 let avatarImg = userInitialsElement.querySelector('img');
                 if (!avatarImg) {
@@ -103,12 +122,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     avatarImg.className = 'w-100 h-100 rounded-circle';
                     avatarImg.alt = 'User Avatar';
                     avatarImg.style.objectFit = 'cover';
-                    
+
                     // 清空内容并添加图片
                     userInitialsElement.textContent = '';
                     userInitialsElement.appendChild(avatarImg);
                 }
-                
+
                 // 设置头像图片
                 avatarImg.src = userInfo.avatarUrl;
                 // 重置背景色为透明
@@ -117,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 没有头像，显示用户名首字母
                 const initials = userInfo.username.charAt(0).toUpperCase();
                 userInitialsElement.textContent = initials;
-                
+
                 // Set a background color based on username (simple hash for consistent color)
                 const hash = simpleHash(userInfo.username);
                 const hue = hash % 360; // 0-359 hue value
@@ -125,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     // Generate a simple hash from a string
     function simpleHash(str) {
         let hash = 0;
@@ -135,24 +154,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return Math.abs(hash);
     }
-    
+
     // Handle logout button click
     if (logoutButton) {
         logoutButton.addEventListener('click', function(e) {
             e.preventDefault();
             if (window.AuthUtils) {
                 AuthUtils.logout();
-            } 
+            }
         });
     }
-    
+
     // Initial UI update
     updateAuthUI();
-    
+
     // Monitor cookie changes by periodically checking
     // (cookies don't trigger storage events like localStorage)
     // setInterval(updateAuthUI, 5000);
-    
+
     // 监听自定义事件，当用户信息更新时更新头像
     document.addEventListener('userInfoUpdated', function(e) {
         console.log('userInfoUpdated event received', e.detail);
@@ -160,4 +179,4 @@ document.addEventListener('DOMContentLoaded', function() {
             updateUserAvatar(e.detail.newUserInfo);
         }
     });
-}); 
+});
