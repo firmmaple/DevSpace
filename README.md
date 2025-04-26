@@ -24,13 +24,14 @@ DevSpace
 
 - Spring Boot 3.x
 - Thymeleaf + Bootstrap 5.x (用于前端页面渲染)
-- Spring Security 6.x (使用 JWT Cookie 进行认证和授权)
+- Spring Security 6.x (使用 JWT Cookie 进行认证和授权，支持 OAuth2)
 - MyBatis, MyBatis-Plus (已使用)
 - MySQL
-- Redis (已使用，用于存储在线用户)
+- Redis (已使用，用于存储在线用户、文章浏览量缓存)
 - RabbitMQ (计划使用，用于评论、点赞、收藏等异步处理)
 - HandlerExceptionResolver + @RestControllerAdvice (已使用，用于全局异常处理)
 - AOP + TraceID (已实现，用于日志记录)
+- Spring Scheduling (已使用，用于定时任务)
 
 ## 项目结构
 
@@ -52,8 +53,9 @@ DevSpace
 │   └── src/main/java/org/jeffrey/service/
 │       ├── security/    # Spring Security 配置、过滤器、服务、处理器
 │       ├── user/        # 用户服务、仓库 (Mapper/Entity)
-│       ├── article/     # 文章服务、仓库 (Mapper/Entity)
+│       ├── article/     # 文章服务、仓库 (Mapper/Entity, ViewCountDO/Mapper)
 │       ├── file/        # 文件服务 (LocalFileServiceImpl)
+│       ├── scheduler/   # 定时任务 (ArticleViewCountSyncScheduler)
 │       └── *.java       # 配置类 (MybatisPlusConfig, ServiceAutoConfig)
 ├── ui/              # 前端资源
 │   └── src/main/resources/
@@ -241,54 +243,54 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
 
 ## 3.3 用户认证与注册
 
-DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 和 JWT (JSON Web Tokens)。JWT 通过安全的 HTTP-only Cookie 进行传输。
+DevSpace 实现了用户认证和注册功能，支持**传统用户名/密码登录**和**GitHub OAuth2登录**。认证状态通过安全的 **HTTP-only JWT Cookie** (`jwt_token`) 和**标准 UserInfo Cookie** (`user_info`) 进行管理。
 
 ### 已实现功能
 
 1. **用户注册**
     - 用户注册表单页面 (`/register`)
-    - 客户端表单验证（用户名、密码格式检查）
-    - 服务端验证和用户创建
+    - 客户端和服务器端表单验证
     - 密码加密存储
     - 重复用户名检查
 
 2. **用户认证**
-    - 用户登录表单 (`/login`)
-    - **JWT 令牌生成与 Cookie 设置**: 成功登录后，服务器生成 JWT 并将其设置在一个 HTTP-only Cookie (`jwt_token`) 中。这提高了安全性，因为客户端 JavaScript 无法直接访问令牌。
-    - **Cookie 验证**: 后续请求通过 `JWTAuthenticationFilter` 自动验证 Cookie 中的 JWT。
-    - 认证失败处理 (`GlobalExceptionHandler` 和 `CustomAuthenticationEntryPoint`)
-    - 安全路由保护 (`SecurityConfig`)
-    - 页面访问未登录重定向: 直接访问需要登录的页面时，`CustomAuthenticationEntryPoint` 会自动重定向到 `/login` 并附带原始URL作为 `redirect` 参数。
-    - API访问未登录处理: 请求需要认证的 API 时，如果未提供有效 Token，`CustomAuthenticationEntryPoint` 会委托 `GlobalExceptionHandler` 返回 `StatusEnum.FORBID_NOTLOGIN` (100_403_003) 的 JSON 响应。
+    - **传统登录**:
+        - 用户登录表单 (`/login`)
+        - 成功后，服务器返回用户信息 (`UserDTO`)，前端 `AuthUtils` 设置 `user_info` Cookie；服务器设置 `jwt_token` HttpOnly Cookie。
+    - **GitHub OAuth2 登录**:
+        - 登录页面提供"使用 GitHub 账号登录"按钮 (`/oauth2/authorization/github`)
+        - 通过 Spring Security OAuth2 Client 处理认证流程。
+        - `OAuth2LoginSuccessHandler` 在认证成功后：
+            - 获取或创建本地用户。
+            - 设置 `jwt_token` HttpOnly Cookie。
+            - **设置 `user_info` 标准 Cookie** (修复了之前未设置此 Cookie 的问题)。
+            - 重定向到首页。
+    - **JWT 验证**: 后续请求通过 `JWTAuthenticationFilter` 自动验证 `jwt_token` Cookie。
+    - **认证失败处理**: `GlobalExceptionHandler` 和 `CustomAuthenticationEntryPoint` 统一处理。
+    - **访问控制**: 通过 `SecurityConfig` 保护路由。
 
-3. **Cookie-based 用户信息存储**
-    - **用户身份令牌存储**: JWT 令牌通过 HTTP-Only Cookie 存储，提供了更高的安全性，防止 XSS 攻击。
-    - **用户信息存储**: 用户信息（用户名、头像等）通过标准 Cookie (`user_info`) 存储，允许前端 JavaScript 访问用于界面显示。
-    - **统一的认证机制**: 所有认证相关数据都通过 Cookie 传输，确保跨页面的一致性和安全性。
-    - **自动凭证传输**: 所有 API 请求使用 `credentials: 'include'` 确保 Cookie 自动随请求发送。
+3. **Cookie-based 认证管理**
+    - **JWT 令牌 (`jwt_token`)**: 通过 **HTTP-Only Cookie** 存储，防止 XSS 攻击。
+    - **用户信息 (`user_info`)**: 通过**标准 Cookie** 存储，允许前端 JavaScript (`AuthUtils.js`) 读取以更新 UI 和判断登录状态。
+    - **统一认证机制**: 无论哪种登录方式，最终都依赖这两个 Cookie 进行状态管理。
+    - **自动凭证传输**: `AuthUtils.authenticatedFetch` 使用 `credentials: 'include'` 确保 Cookie 自动随请求发送。
 
 ### 技术实现
 
-1. **前端实现** (`AuthUtils.js`):
-    - Thymeleaf 模板引擎渲染的注册和登录页面
-    - Bootstrap 5.3 提供的样式和布局
-    - 客户端 JavaScript 验证
-    - **统一认证工具 (`AuthUtils`)**: 提供 `setUserInfo`, `getUserInfo`, `isAuthenticated`, `logout` 等方法，封装了 Cookie 操作。
-    - **使用 `AuthUtils.authenticatedFetch`**: 自动包含 `credentials: 'include'` 选项，确保浏览器随请求发送 Cookie。
+1. **前端实现** (`AuthUtils.js`, `login.html`):
+    - Thymeleaf 渲染的登录/注册页面，包含 GitHub 登录按钮。
+    - **统一认证工具 (`AuthUtils`)**: 封装 `user_info` Cookie 操作 (`setUserInfo`, `getUserInfo`, `isAuthenticated`, `logout`)。
+    - `authenticatedFetch`: 包装 `fetch` API，自动处理凭证发送和基本响应/错误处理。
 
 2. **后端实现**:
-    - `AuthController` 处理认证和注册请求
-    - `UserService` 接口定义和 `UserServiceImpl` 实现
-    - Spring Security 配置在 `SecurityConfig` 中设置
-    - 使用 `PasswordEncoder` 进行密码加密
-    - JWT 认证过滤器 `JWTAuthenticationFilter`
-    - **认证入口点 `CustomAuthenticationEntryPoint`**: 区分页面请求（重定向到登录页）和 API 请求（返回 JSON 错误）。
-    - **全局异常处理器 `GlobalExceptionHandler`**: 统一处理包括认证/授权在内的各种 API 异常。
+    - `AuthController`: 处理传统登录和注册请求。
+    - `UserService`: 处理用户数据，包含 `processOAuth2User` 方法。
+    - `SecurityConfig`: 配置 Spring Security，启用 JWT 和 OAuth2 登录。
+    - `JWTAuthenticationFilter`: 验证 `jwt_token` Cookie。
+    - `OAuth2LoginSuccessHandler`: 处理 OAuth2 登录成功后的逻辑，设置两个 Cookie。
+    - `CustomAuthenticationEntryPoint`, `GlobalExceptionHandler`: 处理认证/授权异常。
 
-3. **数据模型**:
-    - `UserDO` 实体类映射到数据库
-    - `RegisterDTO` 用于注册请求数据传输
-    - `ResVo` 通用响应对象封装 API 响应
+3. **数据模型**: `UserDO`, `UserDTO`, `RegisterDTO`, `ResVo`。
 
 ### 前端请求最佳实践
 
@@ -330,24 +332,25 @@ DevSpace 实现了完整的用户认证和注册功能，使用 Spring Security 
 4. **用户信息存储**: 用户信息（如用户名、ID、头像URL）在登录成功后存储在 Cookie (`user_info`) 中（通过 `AuthUtils.setUserInfo`)，用于 UI 显示。JWT 令牌本身存储在 HTTP-only Cookie (`jwt_token`) 中。
 
 - **UI 模板**:
-    - `ui/src/main/resources/templates/register.html` - 注册表单
-    - `ui/src/main/resources/templates/login.html` - 登录表单
+    - `ui/src/main/resources/templates/register.html`
+    - `ui/src/main/resources/templates/login.html`
 
 - **后端实现**:
-    - `web/src/main/java/org/jeffrey/web/login/AuthController.java` - 控制器
-    - `service/src/main/java/org/jeffrey/service/user/service/UserService.java` - 服务接口
-    - `service/src/main/java/org/jeffrey/service/user/service/impl/UserServiceImpl.java` - 服务实现
-    - `core/src/main/java/org/jeffrey/core/security/SecurityConfig.java` - 安全配置
+    - `web/src/main/java/org/jeffrey/web/login/AuthController.java`
+    - `service/src/main/java/org/jeffrey/service/user/service/impl/UserServiceImpl.java`
+    - `service/src/main/java/org/jeffrey/service/security/SecurityConfig.java`
+    - `service/src/main/java/org/jeffrey/service/security/OAuth2LoginSuccessHandler.java`
 
 - **DTO**:
-    - `api/src/main/java/org/jeffrey/api/dto/RegisterDTO.java` - 注册数据传输对象
+    - `api/src/main/java/org/jeffrey/api/dto/RegisterDTO.java`
+    - `api/src/main/java/org/jeffrey/api/dto/user/UserDTO.java`
 
 ### 下一步计划
 
 - 添加邮箱验证
 - 实现密码重置功能
 - 增强密码策略
-- 添加第三方登录（如 GitHub, Google）
+- 添加其他 OAuth2 提供商（如 Google）
 
 ## 3.4 用户资料管理
 
@@ -640,6 +643,58 @@ DevSpace 使用 Java 的 Long 类型作为实体 ID，采用特定策略处理 J
 - 避免使用 `parseInt()` 或 `Number()` 等转换 ID
 - DOM 属性中保持 ID 的字符串形式
 - 必要时使用 `BigInt` 类型处理大整数运算
+
+## 3.10 文章浏览量统计系统 (Article View Count System)
+
+DevSpace 实现了一个基于 Redis 缓存和 MySQL 持久化的文章浏览量统计系统。
+
+### 已实现功能
+
+1.  **浏览量计数**:
+    *   每次成功访问文章详情页 (`/api/articles/{id}`) 时，自动增加该文章的浏览量。
+    *   使用 Redis Hash 结构 (`article_views`) 实时存储和更新浏览量，性能高。
+2.  **数据展示**:
+    *   文章详情页和文章列表页均显示准确的文章浏览量。
+3.  **持久化与同步**:
+    *   新增 `article_viewcount` 表用于持久化存储浏览量。
+    *   通过 `ArticleViewCountSyncScheduler` 定时任务：
+        *   每 5 分钟将 Redis 中的浏览量增量同步到 MySQL 数据库。
+        *   每天凌晨 2 点执行一次全量同步，确保数据最终一致性。
+4.  **缓存策略**:
+    *   读取浏览量时优先从 Redis 获取。
+    *   若 Redis 中不存在，则从数据库加载并回填到 Redis 缓存。
+
+### 技术实现
+
+1.  **Redis 缓存 (`RedisClient`)**:
+    *   使用 Hash (`article_views`) 存储 `articleId -> viewCount` 映射。
+    *   利用 `hIncr` 原子操作增加浏览量。
+2.  **MySQL 持久化**:
+    *   `article_viewcount` 表存储最终的浏览量数据。
+    *   `ArticleViewCountMapper` 提供数据库操作。
+3.  **服务层 (`ArticleViewCountService`)**:
+    *   封装浏览量获取 (`getViewCount`) 和增加 (`incrementViewCount`) 逻辑。
+    *   提供数据同步方法 (`syncViewCountsToDatabase`)。
+4.  **定时调度 (`ArticleViewCountSyncScheduler`)**:
+    *   使用 Spring `@Scheduled` 注解配置定时任务。
+    *   分离调度逻辑，提高模块化。
+5.  **业务集成 (`ArticleServiceImpl`)**:
+    *   在 `getArticleById` 方法中调用 `incrementViewCount`。
+    *   在 `convertToVO` 和 `convertToSummaryVO` 中调用 `getViewCount` 获取浏览量。
+
+### 代码位置
+
+-   **调度器**: `service/src/main/java/org/jeffrey/service/scheduler/ArticleViewCountSyncScheduler.java`
+-   **服务**: `service/src/main/java/org/jeffrey/service/article/service/impl/ArticleViewCountServiceImpl.java`
+-   **实体**: `service/src/main/java/org/jeffrey/service/article/repository/entity/ArticleViewCountDO.java`
+-   **Mapper**: `service/src/main/java/org/jeffrey/service/article/repository/mapper/ArticleViewCountMapper.java`
+-   **数据库脚本**: `web/src/main/resources/db/init.sql`
+-   **Redis 客户端**: `core/src/main/java/org/jeffrey/core/cache/RedisClient.java`
+
+### 后续计划
+
+-   引入布隆过滤器等机制防止恶意刷量。
+-   实现热门文章排行功能。
 
 
 

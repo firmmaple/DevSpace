@@ -4,7 +4,7 @@
 
 # 1. 前后端数据传输与认证
 
-DevSpace采用统一的数据传输模型，确保API响应格式一致性和可预测性。认证机制基于 JWT (JSON Web Token)，并通过安全的 Cookie 进行管理。
+DevSpace采用统一的数据传输模型，确保API响应格式一致性和可预测性。认证机制主要基于 JWT (JSON Web Token)，并通过安全的 Cookie 进行管理。同时支持 GitHub OAuth2 登录。
 
 ## 核心组件
 
@@ -61,18 +61,34 @@ public class Status {
 - 5xx: 服务器错误(内部异常等)
 ```
 
-### Cookie-Based 认证与用户信息
+### 认证方式
 
-- **JWT 令牌存储**: 认证成功后，服务器生成 JWT 并将其设置在名为 `jwt_token` 的 **HTTP-only** Cookie 中。HttpOnly 属性可防止客户端 JavaScript 访问令牌，增强安全性。
-- **用户信息存储**: 用户基本信息（如用户名、ID、头像URL）存储在名为 `user_info` 的**标准 Cookie** 中。此 Cookie **非** HTTP-only，允许前端 JavaScript (`AuthUtils.js`) 访问以更新 UI。
-- **传输**: 浏览器会自动将这两个 Cookie 附加到后续对同一域的请求中。
-- **验证**: 服务器端的 `JWTAuthenticationFilter` 负责从请求 Cookie 中提取并验证 `jwt_token`。
-- **统一工具 (`AuthUtils.js`)**: 前端使用 `AuthUtils` 封装 Cookie 操作，提供 `setUserInfo`, `getUserInfo`, `isAuthenticated`, `logout` 等方法。
-- **自动凭证**: 所有需要认证的 API 请求通过 `AuthUtils.authenticatedFetch` 发送，该方法自动包含 `credentials: 'include'` 选项，确保 Cookie 被发送。
+DevSpace 提供两种认证方式：
+
+1.  **传统用户名/密码认证**:
+    - **JWT 令牌存储**: 认证成功后，服务器生成 JWT 并将其设置在名为 `jwt_token` 的 **HTTP-only** Cookie 中。HttpOnly 属性可防止客户端 JavaScript 访问令牌，增强安全性。
+    - **用户信息存储**: 用户基本信息（如用户名、ID、头像URL）通过接口响应返回给前端，前端通过 `AuthUtils.js` 将其存储在名为 `user_info` 的**标准 Cookie** 中。此 Cookie **非** HTTP-only，允许前端 JavaScript 访问以更新 UI。
+    - **验证**: 服务器端的 `JWTAuthenticationFilter` 负责从请求 Cookie 中提取并验证 `jwt_token`。
+
+2.  **GitHub OAuth2 认证**:
+    - **流程**: 用户点击"使用 GitHub 账号登录"按钮，重定向至 GitHub 授权，授权后 GitHub 重定向回应用 (`/login/oauth2/code/github`)。
+    - **成功处理 (`OAuth2LoginSuccessHandler`)**: 
+        - 服务器获取 GitHub 用户信息。
+        - 在本地数据库中查找或创建用户。
+        - 生成 JWT 并设置 `jwt_token` **HTTP-only** Cookie。
+        - 将用户信息（UserDTO）序列化为 JSON，并设置 `user_info` **标准 Cookie**。
+        - 重定向到首页。
+    - **JWT 验证**: 同传统认证，后续请求通过 `JWTAuthenticationFilter` 验证 `jwt_token` Cookie。
+
+### 统一的 Cookie 管理 (`AuthUtils.js`)
+
+- 前端使用 `AuthUtils` 统一管理 `user_info` Cookie，提供 `setUserInfo`, `getUserInfo`, `isAuthenticated`, `logout` 等方法。
+- 无论使用哪种登录方式，前端都通过 `AuthUtils.getUserInfo()` 读取 `user_info` Cookie 来判断登录状态和获取用户信息。
+- `AuthUtils.authenticatedFetch` 自动包含 `credentials: 'include'` 选项，确保浏览器自动发送 `jwt_token` 和 `user_info` Cookies。
 
 ## 使用示例
 
-### 成功响应 (登录)
+### 成功响应 (传统登录)
 
 ```java
 // AuthController.java - 登录成功
@@ -87,13 +103,41 @@ jwtCookie.setPath("/");
 jwtCookie.setMaxAge(86400); // 1 day
 response.addCookie(jwtCookie);
 
-// 获取并准备 UserVO (注意 UserVO 不应包含敏感信息)
-UserVO userVO = userService.getUserVoById(userDetails.getUserId()); // 假设有此方法
+// 获取并准备 UserDTO
+UserDTO userDTO = userDetails.toUserDTO();
 
-// 返回 UserVO 给前端，前端 AuthUtils 会将其存入 user_info Cookie
+// 返回 UserDTO 给前端，前端 AuthUtils 会将其存入 user_info Cookie
 Map<String, Object> authInfo = new HashMap<>();
-authInfo.put("user", userVO);
+authInfo.put("user", userDTO);
 return ResVo.ok(authInfo);
+```
+
+### 成功响应 (GitHub OAuth2 登录 - 后端处理)
+
+```java
+// OAuth2LoginSuccessHandler.java - 登录成功
+// ... 获取 OAuth2User ...
+UserDO user = userService.processOAuth2User(username, githubId, email, avatarUrl);
+CustomUserDetails userDetails = new CustomUserDetails(user);
+String token = jwtUtil.generateToken(userDetails);
+onlineUserService.save(userDetails.getUsername(), token);
+
+// 设置 JWT HttpOnly Cookie
+Cookie jwtCookie = new Cookie("jwt_token", token);
+jwtCookie.setHttpOnly(true);
+// ... 设置 path, maxAge ...
+response.addCookie(jwtCookie);
+
+// 设置 User Info 标准 Cookie (供前端读取)
+UserDTO userDTO = userDetails.toUserDTO();
+String userInfoJson = URLEncoder.encode(objectMapper.writeValueAsString(userDTO), StandardCharsets.UTF_8);
+Cookie userInfoCookie = new Cookie("user_info", userInfoJson);
+userInfoCookie.setHttpOnly(false);
+// ... 设置 path, maxAge ...
+response.addCookie(userInfoCookie);
+
+// 重定向
+getRedirectStrategy().sendRedirect(request, response, "/");
 ```
 
 ### 错误响应
@@ -157,16 +201,24 @@ public class ArticleVO implements Serializable {
     private Long id;
     private String title;
     private String summary;
-    private String content; 
+    private String content; // HTML for display
+    private String rawContent; // Markdown for editing
     @JsonSerialize(using = ToStringSerializer.class)
     private Long authorId;
     private String authorUsername; 
+    private String authorAvatarUrl;
+    private String authorBio;
     private Integer status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Long viewCount;
-    private Long likeCount;
-    private Long collectCount;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long viewCount; // From Redis/DB ViewCount Service
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long likeCount; // From Like Service/DB
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long collectCount; // From Collect Service/DB
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long commentCount; // From Comment Service/DB
     private Boolean likedByCurrentUser;
     private Boolean collectedByCurrentUser;
     private List<String> tags;
@@ -183,9 +235,12 @@ public class ArticleSummaryVO implements Serializable {
     private String authorUsername;
     private Integer status;
     private LocalDateTime createdAt;
-    private Long viewCount;
-    private Long likeCount;
-    private Long collectCount;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long viewCount; // From Redis/DB ViewCount Service
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long likeCount; // From Like Service/DB
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long collectCount; // From Collect Service/DB
     private List<String> tags;
 }
 
@@ -265,14 +320,21 @@ public class UserUpdateDTO implements Serializable {
 
 # 3. API 文档
 
-## 3.1 认证接口 (`/auth`)
+## 3.1 认证接口 (`/auth`, `/oauth2`)
     - `POST /auth/register`: 用户注册
         - Request Body: `RegisterDTO`
         - Response: `ResVo<Void>`
-    - `POST /auth/login`: 用户登录
+    - `POST /auth/login`: 用户登录 (传统方式)
         - Request Body: Form parameters: `username`, `password`
-        - Response: `ResVo<Map<String, Object>>` (包含 `user` (UserVO))
+        - Response: `ResVo<Map<String, Object>>` (包含 `user` (UserDTO))
         - **Side Effect**: Sets `jwt_token` HttpOnly Cookie. 前端 `AuthUtils` 会将返回的 `user` 存入 `user_info` Cookie。
+    - `GET /oauth2/authorization/github`: GitHub OAuth2 登录入口
+        - **Action**: 重定向到 GitHub 授权页面。
+    - `/login/oauth2/code/github`: GitHub OAuth2 回调地址 (由 Spring Security 处理)
+        - **Action**: 处理 GitHub 返回的授权码，验证用户，`OAuth2LoginSuccessHandler` 执行以下操作：
+          - Sets `jwt_token` HttpOnly Cookie.
+          - Sets `user_info` Standard Cookie.
+          - 重定向到 `/`.
     - `POST /auth/logout`: 用户登出
         - Response: `ResVo<String>`
         - **Side Effect**: Clears `jwt_token` and `user_info` Cookies.
@@ -296,11 +358,12 @@ public class UserUpdateDTO implements Serializable {
             - `status` (Integer, optional): 按状态筛选 (1: 已发布, 0: 草稿)
             - `tag` (String, optional): 按标签筛选
             - `keyword` (String, optional): 按标题或内容搜索
-        - Response: `ResVo<IPage<ArticleSummaryVO>>`
+        - Response: `ResVo<IPage<ArticleSummaryVO>>` (Includes accurate `viewCount`)
     - `GET /api/articles/{id}`: 获取文章详情
         - Parameters:
             - `id` (Long): 文章ID (字符串形式)
-        - Response: `ResVo<ArticleVO>`
+        - Response: `ResVo<ArticleVO>` (Includes accurate `viewCount`)
+        - **Side Effect**: Increments the view count for the article in Redis.
     - `POST /api/articles`: 创建文章
         - Request Body: `ArticleCreateDTO` (不包含 `summary`)
         - Response: `ResVo<ArticleVO>`
@@ -413,6 +476,13 @@ public class UserUpdateDTO implements Serializable {
     - `create_time` (DATETIME)
     - `update_time` (DATETIME)
     - `deleted` (BOOLEAN, default: false)
+
+- **文章浏览量表 (`t_article_viewcount`)**
+    - `id` (BIGINT, PK)
+    - `article_id` (BIGINT, UK) - 文章ID
+    - `view_count` (BIGINT, default: 0) - 浏览量
+    - `updated_at` (DATETIME) - 最后更新时间
+    - *建议*: 添加 `INDEX(view_count DESC)` 支持按热度排序
 
 # 5. 用户资料管理设计
 
@@ -702,3 +772,73 @@ DevSpace 实现了一个动态生成的文章目录导航功能，用于提升�
 - **动态更新**：仅在页面初始加载时生成目录，无需在阅读过程中重新计算。
 - **小屏适配**：在移动设备上提供内联折叠式目录，点击后展开，再次点击折叠。
 - **交互优化**：添加了目录项的悬停效果和当前位置指示，提升用户体验。
+
+# 9. 文章浏览量统计系统设计
+
+## 9.1 概述
+
+为跟踪文章的受欢迎程度，系统实现了基于Redis缓存和MySQL持久化的浏览量统计功能。
+
+## 9.2 功能点
+
+- **实时计数**: 访问文章详情页时，通过Redis `HINCRBY` 原子操作增加浏览量。
+- **高效读取**: API响应（文章详情、列表）直接从Redis或数据库获取最新浏览量。
+- **数据持久化**: 定期将Redis中的浏览量同步到MySQL的`t_article_viewcount`表。
+- **最终一致性**: 通过定时任务确保缓存与数据库数据最终保持一致。
+
+## 9.3 技术实现
+
+### 9.3.1 缓存层 (Redis)
+
+- **数据结构**: 使用Redis Hash结构，Key为`article_views`。
+- **字段**: Hash的Field为文章ID (字符串)，Value为对应的浏览量 (数值)。
+- **操作**: 
+    - 增加: `HINCRBY article_views <articleId> 1`
+    - 获取单个: `HGET article_views <articleId>`
+    - 获取所有: `HGETALL article_views` (用于同步)
+- **客户端**: `core/src/main/java/org/jeffrey/core/cache/RedisClient.java`
+
+### 9.3.2 持久化层 (MySQL)
+
+- **数据表**: `t_article_viewcount` (字段见 #4 数据库设计)。
+- **Mapper**: `service/src/main/java/org/jeffrey/service/article/repository/mapper/ArticleViewCountMapper.java` (基于MyBatis-Plus)
+
+### 9.3.3 服务层 (`ArticleViewCountService`)
+
+- **接口**: `service/src/main/java/org/jeffrey/service/article/service/ArticleViewCountService.java`
+- **实现**: `service/src/main/java/org/jeffrey/service/article/service/impl/ArticleViewCountServiceImpl.java`
+    - `incrementViewCount(articleId)`: 调用Redis `hIncr`。
+    - `getViewCount(articleId)`: 优先读Redis，失败则读DB并回填Redis。
+    - `syncViewCountsToDatabase()`: 核心同步逻辑，由调度器调用。
+
+### 9.3.4 定时调度 (`ArticleViewCountSyncScheduler`)
+
+- **类**: `service/src/main/java/org/jeffrey/service/scheduler/ArticleViewCountSyncScheduler.java`
+- **职责**: 负责按计划调用`ArticleViewCountService.syncViewCountsToDatabase()`。
+- **策略**: 
+    - `@Scheduled(fixedRate = 300000)`: 每5分钟执行一次。
+    - `@Scheduled(cron = "0 0 2 * * *")`: 每天凌晨2点执行一次。
+- **配置**: 需要在配置类 (如 `ServiceAutoConfig`) 上添加 `@EnableScheduling`。
+
+### 9.3.5 业务集成 (`ArticleServiceImpl`)
+
+- `getArticleById()`: 在返回文章详情前调用 `incrementViewCount()`。
+- `convertToVO()` / `convertToSummaryVO()`: 调用 `getViewCount()` 填充VO中的 `viewCount` 字段。
+
+## 9.4 数据同步流程
+
+1. `ArticleViewCountSyncScheduler` 按计划触发。
+2. 调用 `ArticleViewCountService.syncViewCountsToDatabase()`。
+3. 服务层调用 `RedisClient.hGetAll("article_views")` 获取Redis中所有文章的浏览量。
+4. 遍历获取到的Map。
+5. 对每个 `articleId`：
+    a. 查询 `t_article_viewcount` 表中是否存在记录。
+    b. 如果存在，更新 `view_count` 字段。
+    c. 如果不存在，插入新记录。
+6. 记录同步日志。
+
+## 9.5 注意事项
+
+- Redis Key (`article_views`) 应保持一致。
+- 定时任务的执行频率应根据系统负载和数据新鲜度要求调整。
+- 异常处理：同步过程中单个文章失败不应中断整个任务。

@@ -25,6 +25,10 @@ public class SecurityMatchersConfig {
             new AntPathRequestMatcher("/images/**"),
             new AntPathRequestMatcher("/static/**"),
             new AntPathRequestMatcher("/webjars/**"),
+            // OAuth2 related paths
+            new AntPathRequestMatcher("/oauth2/**"),
+            // // --- OAuth2 登录入口和回调是 Spring Security 处理的，通常不需要显式 permitAll ---
+            // new AntPathRequestMatcher("/login/oauth2/code/**"),
             // Swagger / OpenAPI / Knife4j 文档路径 (根据你的实际使用情况调整)
             new AntPathRequestMatcher("/swagger-ui/**"),
             new AntPathRequestMatcher("/v3/api-docs/**"),

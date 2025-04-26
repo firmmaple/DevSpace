@@ -28,6 +28,7 @@ public class SecurityConfig {
     private final RequestMatcher publicEndpointsMatcher;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     // No explicit UserDetailsService needed here if UserServiceImpl implements it and is a @Service
 
 
@@ -81,6 +82,10 @@ public class SecurityConfig {
 //                        .invalidateHttpSession(true) // Invalidate session
 //                        .deleteCookies("JSESSIONID") // Delete cookies
 //                        .permitAll())
+                // Enable OAuth2 login
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2LoginSuccessHandler)
+                        .permitAll())
                 // Disable CSRF for simplicity in this example, consider enabling it with proper token handling in production
                 .csrf(AbstractHttpConfigurer::disable)
                 .addFilterAfter(jwtAuthenticationFilter, ExceptionTranslationFilter.class)

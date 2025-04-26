@@ -121,3 +121,14 @@ CREATE TABLE IF NOT EXISTS `comment` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_parent_id` (`parent_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='评论表';
+
+-- Article View Count Table
+CREATE TABLE IF NOT EXISTS `article_viewcount` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `article_id` bigint NOT NULL COMMENT '文章ID',
+  `view_count` bigint NOT NULL DEFAULT 0 COMMENT '浏览量',
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_article_id` (`article_id`),
+  KEY `idx_view_count` (`view_count` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='文章浏览量表';
