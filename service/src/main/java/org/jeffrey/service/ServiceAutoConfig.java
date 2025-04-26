@@ -1,12 +1,14 @@
 package org.jeffrey.service;
 
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 import org.jeffrey.service.config.ElasticsearchConfig;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.web.client.RestTemplate;
 
 
 @Configuration
@@ -24,4 +26,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableScheduling
 public class ServiceAutoConfig {
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
 }

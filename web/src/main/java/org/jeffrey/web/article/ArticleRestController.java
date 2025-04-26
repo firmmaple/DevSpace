@@ -8,6 +8,7 @@ import org.jeffrey.api.vo.Article.ArticleSummaryVO;
 import org.jeffrey.api.vo.Article.ArticleVO;
 import org.jeffrey.api.vo.ResVo;
 import org.jeffrey.core.trace.TraceLog;
+import org.jeffrey.service.ai.service.AIService;
 import org.jeffrey.service.article.service.ArticleService;
 import org.jeffrey.service.security.CustomUserDetails;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ArticleRestController {
     private final ArticleService articleService;
+    private final AIService aiService;
 
     @PostMapping
 //    @PreAuthorize("isAuthenticated()") // Ensure user is logged in
@@ -25,6 +27,7 @@ public class ArticleRestController {
     public ResVo<ArticleVO> createArticle(@RequestBody ArticleCreateDTO createDTO,
                                           @AuthenticationPrincipal CustomUserDetails currentUser) {
         Long authorId = currentUser.getUserId();
+        createDTO.setSummary(aiService.getArticleSummary(createDTO.getContent()));
         ArticleVO createdArticle = articleService.createArticle(createDTO, authorId);
         return ResVo.ok(createdArticle);
     }
