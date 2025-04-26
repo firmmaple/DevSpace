@@ -39,4 +39,14 @@ public interface UserService extends IService<UserDO> {
      * @return list of users
      */
     List<UserDO> getUsersByIds(List<Long> userIds);
+    
+    /**
+     * Process an OAuth2 user login (either create a new user or fetch existing one)
+     * @param username GitHub username
+     * @param githubId GitHub user ID
+     * @param email GitHub email
+     * @param avatarUrl GitHub avatar URL
+     * @return the user
+     */
+    UserDO processOAuth2User(String username, String githubId, String email, String avatarUrl);
 }

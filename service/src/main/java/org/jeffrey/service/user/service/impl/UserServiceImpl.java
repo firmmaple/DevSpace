@@ -138,4 +138,56 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
 
             return avatarUrl;
     }
+    
+    /**
+     * Process an OAuth2 user login (either create a new user or fetch existing one)
+     * @param username GitHub username
+     * @param githubId GitHub user ID
+     * @param email GitHub email
+     * @param avatarUrl GitHub avatar URL
+     * @return the user
+     */
+    @Override
+    public UserDO processOAuth2User(String username, String githubId, String email, String avatarUrl) {
+        // TODO 这里有很大的问题，如果Github用户名和现有用户名一样（不实用GitHub注册的），那么就能直接登录了！
+        
+        // First, try to find the user by username
+        Optional<UserDO> existingUser = getUserByUsername(username);
+        
+        if (existingUser.isPresent()) {
+            // User exists, update their information if needed
+            UserDO user = existingUser.get();
+            
+            // Update email and avatar if they've changed
+            boolean needsUpdate = false;
+            
+            if (email != null && !email.equals(user.getEmail())) {
+                user.setEmail(email);
+                needsUpdate = true;
+            }
+            
+            if (avatarUrl != null && !avatarUrl.equals(user.getAvatarUrl())) {
+                user.setAvatarUrl(avatarUrl);
+                needsUpdate = true;
+            }
+            
+            if (needsUpdate) {
+                updateById(user);
+            }
+            
+            return user;
+        } else {
+            // Create a new user
+            UserDO newUser = new UserDO();
+            newUser.setUsername(username);
+            // Generate a random password for OAuth users since they won't use it
+            newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+            newUser.setEmail(email);
+            newUser.setAvatarUrl(avatarUrl);
+            newUser.setIsAdmin(false);
+            
+            save(newUser);
+            return newUser;
+        }
+    }
 }

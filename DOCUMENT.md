@@ -4,7 +4,7 @@
 
 # 1. 前后端数据传输与认证
 
-DevSpace采用统一的数据传输模型，确保API响应格式一致性和可预测性。认证机制基于 JWT (JSON Web Token)，并通过安全的 Cookie 进行管理。
+DevSpace采用统一的数据传输模型，确保API响应格式一致性和可预测性。认证机制主要基于 JWT (JSON Web Token)，并通过安全的 Cookie 进行管理。同时支持 GitHub OAuth2 登录。
 
 ## 核心组件
 
@@ -61,18 +61,34 @@ public class Status {
 - 5xx: 服务器错误(内部异常等)
 ```
 
-### Cookie-Based 认证与用户信息
+### 认证方式
 
-- **JWT 令牌存储**: 认证成功后，服务器生成 JWT 并将其设置在名为 `jwt_token` 的 **HTTP-only** Cookie 中。HttpOnly 属性可防止客户端 JavaScript 访问令牌，增强安全性。
-- **用户信息存储**: 用户基本信息（如用户名、ID、头像URL）存储在名为 `user_info` 的**标准 Cookie** 中。此 Cookie **非** HTTP-only，允许前端 JavaScript (`AuthUtils.js`) 访问以更新 UI。
-- **传输**: 浏览器会自动将这两个 Cookie 附加到后续对同一域的请求中。
-- **验证**: 服务器端的 `JWTAuthenticationFilter` 负责从请求 Cookie 中提取并验证 `jwt_token`。
-- **统一工具 (`AuthUtils.js`)**: 前端使用 `AuthUtils` 封装 Cookie 操作，提供 `setUserInfo`, `getUserInfo`, `isAuthenticated`, `logout` 等方法。
-- **自动凭证**: 所有需要认证的 API 请求通过 `AuthUtils.authenticatedFetch` 发送，该方法自动包含 `credentials: 'include'` 选项，确保 Cookie 被发送。
+DevSpace 提供两种认证方式：
+
+1.  **传统用户名/密码认证**:
+    - **JWT 令牌存储**: 认证成功后，服务器生成 JWT 并将其设置在名为 `jwt_token` 的 **HTTP-only** Cookie 中。HttpOnly 属性可防止客户端 JavaScript 访问令牌，增强安全性。
+    - **用户信息存储**: 用户基本信息（如用户名、ID、头像URL）通过接口响应返回给前端，前端通过 `AuthUtils.js` 将其存储在名为 `user_info` 的**标准 Cookie** 中。此 Cookie **非** HTTP-only，允许前端 JavaScript 访问以更新 UI。
+    - **验证**: 服务器端的 `JWTAuthenticationFilter` 负责从请求 Cookie 中提取并验证 `jwt_token`。
+
+2.  **GitHub OAuth2 认证**:
+    - **流程**: 用户点击"使用 GitHub 账号登录"按钮，重定向至 GitHub 授权，授权后 GitHub 重定向回应用 (`/login/oauth2/code/github`)。
+    - **成功处理 (`OAuth2LoginSuccessHandler`)**: 
+        - 服务器获取 GitHub 用户信息。
+        - 在本地数据库中查找或创建用户。
+        - 生成 JWT 并设置 `jwt_token` **HTTP-only** Cookie。
+        - 将用户信息（UserDTO）序列化为 JSON，并设置 `user_info` **标准 Cookie**。
+        - 重定向到首页。
+    - **JWT 验证**: 同传统认证，后续请求通过 `JWTAuthenticationFilter` 验证 `jwt_token` Cookie。
+
+### 统一的 Cookie 管理 (`AuthUtils.js`)
+
+- 前端使用 `AuthUtils` 统一管理 `user_info` Cookie，提供 `setUserInfo`, `getUserInfo`, `isAuthenticated`, `logout` 等方法。
+- 无论使用哪种登录方式，前端都通过 `AuthUtils.getUserInfo()` 读取 `user_info` Cookie 来判断登录状态和获取用户信息。
+- `AuthUtils.authenticatedFetch` 自动包含 `credentials: 'include'` 选项，确保浏览器自动发送 `jwt_token` 和 `user_info` Cookies。
 
 ## 使用示例
 
-### 成功响应 (登录)
+### 成功响应 (传统登录)
 
 ```java
 // AuthController.java - 登录成功
@@ -87,13 +103,41 @@ jwtCookie.setPath("/");
 jwtCookie.setMaxAge(86400); // 1 day
 response.addCookie(jwtCookie);
 
-// 获取并准备 UserVO (注意 UserVO 不应包含敏感信息)
-UserVO userVO = userService.getUserVoById(userDetails.getUserId()); // 假设有此方法
+// 获取并准备 UserDTO
+UserDTO userDTO = userDetails.toUserDTO();
 
-// 返回 UserVO 给前端，前端 AuthUtils 会将其存入 user_info Cookie
+// 返回 UserDTO 给前端，前端 AuthUtils 会将其存入 user_info Cookie
 Map<String, Object> authInfo = new HashMap<>();
-authInfo.put("user", userVO);
+authInfo.put("user", userDTO);
 return ResVo.ok(authInfo);
+```
+
+### 成功响应 (GitHub OAuth2 登录 - 后端处理)
+
+```java
+// OAuth2LoginSuccessHandler.java - 登录成功
+// ... 获取 OAuth2User ...
+UserDO user = userService.processOAuth2User(username, githubId, email, avatarUrl);
+CustomUserDetails userDetails = new CustomUserDetails(user);
+String token = jwtUtil.generateToken(userDetails);
+onlineUserService.save(userDetails.getUsername(), token);
+
+// 设置 JWT HttpOnly Cookie
+Cookie jwtCookie = new Cookie("jwt_token", token);
+jwtCookie.setHttpOnly(true);
+// ... 设置 path, maxAge ...
+response.addCookie(jwtCookie);
+
+// 设置 User Info 标准 Cookie (供前端读取)
+UserDTO userDTO = userDetails.toUserDTO();
+String userInfoJson = URLEncoder.encode(objectMapper.writeValueAsString(userDTO), StandardCharsets.UTF_8);
+Cookie userInfoCookie = new Cookie("user_info", userInfoJson);
+userInfoCookie.setHttpOnly(false);
+// ... 设置 path, maxAge ...
+response.addCookie(userInfoCookie);
+
+// 重定向
+getRedirectStrategy().sendRedirect(request, response, "/");
 ```
 
 ### 错误响应
@@ -265,14 +309,21 @@ public class UserUpdateDTO implements Serializable {
 
 # 3. API 文档
 
-## 3.1 认证接口 (`/auth`)
+## 3.1 认证接口 (`/auth`, `/oauth2`)
     - `POST /auth/register`: 用户注册
         - Request Body: `RegisterDTO`
         - Response: `ResVo<Void>`
-    - `POST /auth/login`: 用户登录
+    - `POST /auth/login`: 用户登录 (传统方式)
         - Request Body: Form parameters: `username`, `password`
-        - Response: `ResVo<Map<String, Object>>` (包含 `user` (UserVO))
+        - Response: `ResVo<Map<String, Object>>` (包含 `user` (UserDTO))
         - **Side Effect**: Sets `jwt_token` HttpOnly Cookie. 前端 `AuthUtils` 会将返回的 `user` 存入 `user_info` Cookie。
+    - `GET /oauth2/authorization/github`: GitHub OAuth2 登录入口
+        - **Action**: 重定向到 GitHub 授权页面。
+    - `/login/oauth2/code/github`: GitHub OAuth2 回调地址 (由 Spring Security 处理)
+        - **Action**: 处理 GitHub 返回的授权码，验证用户，`OAuth2LoginSuccessHandler` 执行以下操作：
+          - Sets `jwt_token` HttpOnly Cookie.
+          - Sets `user_info` Standard Cookie.
+          - 重定向到 `/`.
     - `POST /auth/logout`: 用户登出
         - Response: `ResVo<String>`
         - **Side Effect**: Clears `jwt_token` and `user_info` Cookies.

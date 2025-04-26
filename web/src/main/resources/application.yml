@@ -36,6 +36,19 @@ spring:
         concurrency: 3
         # Maximum number of concurrent consumers
         max-concurrency: 10
+        
+  # GitHub OAuth2 Configuration
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: Ov23liGWGv4l57FpNEAP
+            client-secret: 18acc79b882a9297729f70c2522be790484cae5b
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - user:email
+              - read:user
 
 app:
   file:
