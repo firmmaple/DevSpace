@@ -187,80 +187,103 @@
 </head>
 
 <body>
-    <!-- Navigation Fragment -->
-    <header th:fragment="navbar">
-        <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <div class="container">
-                <a class="navbar-brand" th:href="@{/}">
-                    <i class="fas fa-code"></i>DevSpace
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
-                        aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarContent">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item">
-                            <a class="nav-link" th:classappend="${currentPage == 'home' ? 'active' : ''}" th:href="@{/}">首页</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" th:classappend="${currentPage == 'articles' ? 'active' : ''}" th:href="@{/articles}">文章</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" th:classappend="${currentPage == 'backend' ? 'active' : ''}" th:href="@{/category/backend}">后端</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" th:classappend="${currentPage == 'frontend' ? 'active' : ''}" th:href="@{/category/frontend}">前端</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" th:classappend="${currentPage == 'database' ? 'active' : ''}" th:href="@{/category/database}">数据库</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" th:classappend="${currentPage == 'tools' ? 'active' : ''}" th:href="@{/category/tools}">工具</a>
-                        </li>
-                        <!-- Admin link - only shown for admin users -->
-                        <li class="nav-item admin-link force-hide" id="adminNavLink">
-                            <a class="nav-link" th:classappend="${currentPage == 'admin' ? 'active' : ''}" th:href="@{/admin}">管理后台</a>
-                        </li>
-                    </ul>
+<!-- Navigation Fragment -->
+<header th:fragment="navbar">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" th:href="@{/}">
+                <i class="fas fa-code"></i>DevSpace
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                    aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${currentPage == 'home' ? 'active' : ''}" th:href="@{/}">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${currentPage == 'articles' ? 'active' : ''}" th:href="@{/articles}">文章</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${currentPage == 'backend' ? 'active' : ''}" th:href="@{/category/backend}">后端</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${currentPage == 'frontend' ? 'active' : ''}" th:href="@{/category/frontend}">前端</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${currentPage == 'database' ? 'active' : ''}" th:href="@{/category/database}">数据库</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${currentPage == 'tools' ? 'active' : ''}" th:href="@{/category/tools}">工具</a>
+                    </li>
+                    <!-- Admin link - only shown for admin users -->
+                    <li class="nav-item admin-link force-hide" id="adminNavLink">
+                        <a class="nav-link" th:classappend="${currentPage == 'admin' ? 'active' : ''}" th:href="@{/admin}">管理后台</a>
+                    </li>
+                </ul>
 
-                    <!-- 搜索框 -->
-                    <form class="d-flex me-2">
-                        <div class="input-group">
-                            <input class="form-control" type="search" placeholder="搜索文章..." aria-label="Search">
-                            <button class="btn btn-outline-primary" type="submit">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- User Menu (shown when authenticated) -->
-                    <div class="d-flex align-items-center user-menu force-hide" id="userMenu">
-                        <div class="user-avatar" id="userInitials"></div>
-                        <div class="dropdown">
-                            <button class="btn dropdown-toggle" type="button" id="userMenuButton"
-                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                <span id="username">User</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
-                                <li><a class="dropdown-item" th:href="@{/profile}"><i class="fas fa-user me-2"></i>个人中心</a></li>
-                                <li><a class="dropdown-item" th:href="@{/articles/create}"><i class="fas fa-edit me-2"></i>发布文章</a></li>
-                                <li><a class="dropdown-item" th:href="@{/articles?authorId=me}"><i class="fas fa-list me-2"></i>我的文章</a></li>
-                                <li><a class="dropdown-item" th:href="@{/my/favorites}"><i class="fas fa-star me-2"></i>我的收藏</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#" id="logoutButton"><i class="fas fa-sign-out-alt me-2"></i>退出登录</a></li>
-                            </ul>
-                        </div>
+                <!-- 搜索框 -->
+                <form class="d-flex me-2" id="headerSearchForm" action="/articles" method="get">
+                    <div class="input-group">
+                        <input class="form-control" type="search" placeholder="搜索文章..." aria-label="Search" 
+                               id="headerSearchInput" name="keyword">
+                        <button class="btn btn-outline-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
+                </form>
 
-                    <!-- Login/Register buttons (shown when not authenticated) -->
-                    <div class="d-flex gap-2 auth-buttons force-show" id="authButtons">
-                        <a th:href="@{/login}" class="btn btn-outline-primary">登录</a>
-                        <a th:href="@{/register}" class="btn btn-primary">注册</a>
+                <!-- User Menu (shown when authenticated) -->
+                <div class="d-flex align-items-center user-menu force-hide" id="userMenu">
+                    <div class="user-avatar" id="userInitials"></div>
+                    <div class="dropdown">
+                        <button class="btn dropdown-toggle" type="button" id="userMenuButton"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <span id="username">User</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                            <li><a class="dropdown-item" th:href="@{/profile}"><i class="fas fa-user me-2"></i>个人中心</a></li>
+                            <li><a class="dropdown-item" th:href="@{/articles/create}"><i class="fas fa-edit me-2"></i>发布文章</a></li>
+                            <li><a class="dropdown-item" th:href="@{/profile#my-articles}"><i class="fas fa-list me-2"></i>我的文章</a></li>
+                            <li><a class="dropdown-item" th:href="@{/profile#my-collections}"><i class="fas fa-star me-2"></i>我的收藏</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" id="logoutButton"><i class="fas fa-sign-out-alt me-2"></i>退出登录</a></li>
+                        </ul>
                     </div>
                 </div>
+
+                <!-- Login/Register buttons (shown when not authenticated) -->
+                <div class="d-flex gap-2 auth-buttons force-show" id="authButtons">
+                    <a th:href="@{/login}" class="btn btn-outline-primary">登录</a>
+                    <a th:href="@{/register}" class="btn btn-primary">注册</a>
+                </div>
             </div>
-        </nav>
-    </header>
+        </div>
+    </nav>
+    
+    <!-- 添加通用 JavaScript 函数 -->
+    <script>
+        function switchProfileTab(tabId) {
+            // 如果当前不在 profile 页面，使用常规导航
+            if (!window.location.pathname.includes('/profile')) {
+                window.location.href = '/profile#' + tabId;
+                return;
+            }
+            
+            // 如果已经在 profile 页面，手动触发标签切换
+            const tabLink = document.querySelector(`a[href="#${tabId}"]`);
+            if (tabLink) {
+                // 使用 Bootstrap 的 Tab API 激活对应的标签
+                const tab = new bootstrap.Tab(tabLink);
+                tab.show();
+                
+                // 更新 URL hash 但不重新加载页面
+                history.pushState(null, '', '#' + tabId);
+            }
+        }
+    </script>
+</header>
 </body>
 </html>

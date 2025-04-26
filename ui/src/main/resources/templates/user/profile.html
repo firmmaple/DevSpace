@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <title>User Profile - DevSpace</title>
+</head>
+<body>
+    <div th:fragment="content">
+        <div class="container py-4">
+            <!-- 用户信息加载中状态 -->
+            <div id="user-loading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading user profile...</p>
+            </div>
+            
+            <!-- 用户未找到状态 -->
+            <div id="user-not-found" class="alert alert-warning text-center d-none">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <span>User not found. The user might have been removed or doesn't exist.</span>
+            </div>
+            
+            <!-- 用户资料卡片 -->
+            <div id="user-profile-container" class="d-none">
+                <div class="row">
+                    <!-- 用户基本信息 -->
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-body text-center p-4">
+                                <img id="user-avatar" src="https://via.placeholder.com/128" class="rounded-circle mb-3 border shadow-sm" width="128" height="128" style="object-fit: cover;" alt="User Avatar">
+                                <h3 id="user-username" class="mb-1">Username</h3>
+                                <div id="user-bio" class="text-muted mb-3">User bio goes here...</div>
+                                
+                                <div class="d-flex justify-content-around mb-3">
+                                    <div class="text-center">
+                                        <h5 id="article-count">0</h5>
+                                        <div class="text-muted">文章</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <h5 id="like-count">0</h5>
+                                        <div class="text-muted">获赞</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <h5 id="collect-count">0</h5>
+                                        <div class="text-muted">收藏</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="small text-muted mb-3">
+                                    <i class="fas fa-clock me-1"></i> 加入于 <span id="user-join-date">Jan 1, 2023</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 用户文章列表 -->
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header border-0 bg-white">
+                                <h4 class="mb-0"><i class="fas fa-file-alt me-2"></i> 用户文章</h4>
+                            </div>
+                            <div class="card-body p-0">
+                                <!-- 文章列表加载中 -->
+                                <div id="articles-loading" class="text-center py-5">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <span class="ms-2">Loading articles...</span>
+                                </div>
+                                
+                                <!-- 暂无文章 -->
+                                <div id="no-articles" class="alert alert-info m-3 d-none">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    This user hasn't published any articles yet.
+                                </div>
+                                
+                                <!-- 文章列表 -->
+                                <div id="user-articles" class="list-group list-group-flush d-none">
+                                    <!-- 文章列表项将由 JS 填充 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 页面脚本 -->
+    <th:block th:fragment="scripts">
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                // 获取用户ID
+                const userId = /*[[${userId}]]*/ '0';
+                
+                // 加载用户信息
+                loadUserProfile(userId);
+                
+                // 加载用户文章
+                // loadUserArticles(userId); // 稍后实现
+            });
+            
+            // 加载用户资料
+            function loadUserProfile(userId) {
+                const userLoading = document.getElementById('user-loading');
+                const userNotFound = document.getElementById('user-not-found');
+                const userProfileContainer = document.getElementById('user-profile-container');
+                
+                // 显示加载中
+                userLoading.classList.remove('d-none');
+                userNotFound.classList.add('d-none');
+                userProfileContainer.classList.add('d-none');
+                
+                // 调用API获取用户信息
+                AuthUtils.authenticatedFetch(`/api/users/${userId}`)
+                    .then(data => {
+                        // 隐藏加载中状态
+                        userLoading.classList.add('d-none');
+                        
+                        if (data.status.code === 0 && data.result) {
+                            const result = data.result;
+                            const user = result.user;
+                            const stats = result.stats;
+                            
+                            // 更新页面标题
+                            document.title = `${user.username} - DevSpace`;
+                            
+                            // 更新用户信息
+                            document.getElementById('user-avatar').src = user.avatarUrl || 'https://via.placeholder.com/128';
+                            document.getElementById('user-username').textContent = user.username;
+                            document.getElementById('user-bio').textContent = user.bio || 'No bio available';
+                            
+                            // 更新统计数据
+                            document.getElementById('article-count').textContent = stats.articleCount;
+                            document.getElementById('like-count').textContent = stats.likeCount;
+                            document.getElementById('collect-count').textContent = stats.collectCount;
+                            
+                            // 格式化加入日期
+                            if (user.createTime) {
+                                const joinDate = new Date(user.createTime);
+                                document.getElementById('user-join-date').textContent = joinDate.toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                });
+                            }
+                            
+                            // 显示用户资料
+                            userProfileContainer.classList.remove('d-none');
+                            
+                            // 加载用户文章
+                            loadUserArticles(userId);
+                        } else {
+                            // 用户不存在
+                            userNotFound.classList.remove('d-none');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading user profile:', error);
+                        userLoading.classList.add('d-none');
+                        userNotFound.classList.remove('d-none');
+                    });
+            }
+            
+            // 加载用户文章列表
+            function loadUserArticles(userId) {
+                const articlesLoading = document.getElementById('articles-loading');
+                const noArticles = document.getElementById('no-articles');
+                const userArticles = document.getElementById('user-articles');
+                
+                // 显示加载中
+                articlesLoading.classList.remove('d-none');
+                noArticles.classList.add('d-none');
+                userArticles.classList.add('d-none');
+                
+                // 调用API获取用户文章列表
+                // 构建API URL，默认获取已发布的文章(status=1)，第1页，每页10篇
+                const url = `/api/articles?pageNum=1&pageSize=10&authorId=${userId}&status=1`;
+                
+                AuthUtils.authenticatedFetch(url)
+                    .then(data => {
+                        // 隐藏加载中状态
+                        articlesLoading.classList.add('d-none');
+                        
+                        if (data.status.code === 0 && data.result) {
+                            const articles = data.result.records || [];
+                            
+                            if (articles.length > 0) {
+                                // 清空文章列表
+                                userArticles.innerHTML = '';
+                                
+                                // 添加文章
+                                articles.forEach(article => {
+                                    const articleElement = document.createElement('a');
+                                    articleElement.href = `/articles/${article.id}`;
+                                    articleElement.className = 'list-group-item list-group-item-action';
+                                    
+                                    // 格式化日期
+                                    const createdDate = article.createdAt ? new Date(article.createdAt).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                    }) : 'Unknown';
+                                    
+                                    // 文章内容
+                                    articleElement.innerHTML = `
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-1">${article.title}</h5>
+                                            <small class="text-muted">${createdDate}</small>
+                                        </div>
+                                        <p class="mb-1">${article.summary || '无摘要'}</p>
+                                        <div class="d-flex">
+                                            <small class="me-3"><i class="fas fa-eye me-1"></i> ${article.viewCount || 0}</small>
+                                            <small><i class="fas fa-heart me-1"></i> ${article.likeCount || 0}</small>
+                                        </div>
+                                    `;
+                                    
+                                    userArticles.appendChild(articleElement);
+                                });
+                                
+                                // 显示文章列表
+                                userArticles.classList.remove('d-none');
+                            } else {
+                                // 显示暂无文章
+                                noArticles.classList.remove('d-none');
+                            }
+                        } else {
+                            // API调用失败
+                            console.error('Error loading user articles:', data.status.msg);
+                            noArticles.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>加载文章失败，请稍后再试。';
+                            noArticles.classList.remove('d-none');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading user articles:', error);
+                        articlesLoading.classList.add('d-none');
+                        noArticles.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>加载文章失败，请稍后再试。';
+                        noArticles.classList.remove('d-none');
+                    });
+            }
+        </script>
+    </th:block>
+</body>
+</html> 

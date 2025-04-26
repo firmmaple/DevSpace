@@ -67,8 +67,28 @@ document.addEventListener('DOMContentLoaded', function() {
             const tabLink = document.querySelector(`a[href="${hash}"]`);
             if (tabLink) {
                 tabLink.click();
+                
+                // 如果切换到我的文章或我的收藏标签页，加载相应数据
+                if (hash === '#my-articles') {
+                    loadMyArticles(1);
+                } else if (hash === '#my-collections') {
+                    loadMyCollections(1);
+                }
             }
         }
+        
+        // 添加标签页切换事件监听
+        const tabLinks = document.querySelectorAll('.list-group-item[data-bs-toggle="list"]');
+        tabLinks.forEach(link => {
+            link.addEventListener('shown.bs.tab', function(event) {
+                const targetId = event.target.getAttribute('href');
+                if (targetId === '#my-articles') {
+                    loadMyArticles(1);
+                } else if (targetId === '#my-collections') {
+                    loadMyCollections(1);
+                }
+            });
+        });
     }
 
     /**
@@ -355,8 +375,285 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    /**
+     * 加载我的文章
+     * @param {number} page - 页码
+     */
+    function loadMyArticles(page) {
+        const articlesContainer = document.getElementById('my-articles-container');
+        const articlesLoading = document.getElementById('articles-loading');
+        const articlesList = document.getElementById('articles-list');
+        const noArticles = document.getElementById('no-articles');
+        const pagination = document.getElementById('articles-pagination');
+        
+        if (!articlesContainer || !articlesLoading || !articlesList || !noArticles || !pagination) return;
+        
+        // 显示加载状态
+        articlesLoading.classList.remove('d-none');
+        articlesList.classList.add('d-none');
+        noArticles.classList.add('d-none');
+        
+        // 当前用户ID
+        const userId = userInfo ? userInfo.id : null;
+        if (!userId) return;
+        
+        // 构建API URL，获取当前用户的文章
+        const url = `/api/articles?pageNum=${page}&pageSize=5&authorId=${userId}`;
+        
+        AuthUtils.authenticatedFetch(url)
+            .then(response => {
+                articlesLoading.classList.add('d-none');
+                
+                if (response.status.code === 0 && response.result) {
+                    const articles = response.result.records;
+                    
+                    if (articles && articles.length > 0) {
+                        // 显示文章列表
+                        articlesList.innerHTML = '';  // 清空现有内容
+                        articlesList.classList.remove('d-none');
+                        
+                        // 渲染文章列表
+                        articles.forEach(article => {
+                            const articleElement = createArticleElement(article);
+                            articlesList.appendChild(articleElement);
+                        });
+                        
+                        // 更新分页
+                        updatePagination(response.result, pagination, loadMyArticles);
+                    } else {
+                        // 没有文章
+                        noArticles.classList.remove('d-none');
+                        pagination.innerHTML = '';
+                    }
+                } else {
+                    // API返回错误
+                    noArticles.textContent = '加载文章失败，请稍后再试';
+                    noArticles.classList.remove('d-none');
+                    pagination.innerHTML = '';
+                }
+            })
+            .catch(error => {
+                articlesLoading.classList.add('d-none');
+                noArticles.textContent = '加载文章失败：' + error.message;
+                noArticles.classList.remove('d-none');
+                pagination.innerHTML = '';
+                console.error('加载我的文章失败:', error);
+            });
+    }
+
+    /**
+     * 加载我的收藏
+     * @param {number} page - 页码
+     */
+    function loadMyCollections(page) {
+        const collectionsContainer = document.getElementById('my-collections-container');
+        const collectionsLoading = document.getElementById('collections-loading');
+        const collectionsList = document.getElementById('collections-list');
+        const noFavorites = document.getElementById('no-collections');
+        const pagination = document.getElementById('collections-pagination');
+        
+        if (!collectionsContainer || !collectionsLoading || !collectionsList || !noFavorites || !pagination) return;
+        
+        // 显示加载状态
+        collectionsLoading.classList.remove('d-none');
+        collectionsList.classList.add('d-none');
+        noFavorites.classList.add('d-none');
+        
+        // 构建API URL，获取当前用户的收藏
+        const url = `/api/user/collections?pageNum=${page}&pageSize=5`;
+        
+        AuthUtils.authenticatedFetch(url)
+            .then(response => {
+                collectionsLoading.classList.add('d-none');
+                
+                if (response.status.code === 0 && response.result) {
+                    const collections = response.result.records;
+                    
+                    if (collections && collections.length > 0) {
+                        // 显示收藏列表
+                        collectionsList.innerHTML = '';  // 清空现有内容
+                        collectionsList.classList.remove('d-none');
+                        
+                        // 渲染收藏列表
+                        collections.forEach(article => {
+                            const articleElement = createArticleElement(article);
+                            collectionsList.appendChild(articleElement);
+                        });
+                        
+                        // 更新分页
+                        updatePagination(response.result, pagination, loadMyCollections);
+                    } else {
+                        // 没有收藏
+                        noFavorites.classList.remove('d-none');
+                        pagination.innerHTML = '';
+                    }
+                } else {
+                    // API返回错误
+                    noFavorites.textContent = '加载收藏失败，请稍后再试';
+                    noFavorites.classList.remove('d-none');
+                    pagination.innerHTML = '';
+                }
+            })
+            .catch(error => {
+                collectionsLoading.classList.add('d-none');
+                noFavorites.textContent = '加载收藏失败：' + error.message;
+                noFavorites.classList.remove('d-none');
+                pagination.innerHTML = '';
+                console.error('加载我的收藏失败:', error);
+            });
+    }
+
+    /**
+     * 创建文章元素
+     * @param {Object} article - 文章对象
+     * @returns {HTMLElement} 文章DOM元素
+     */
+    function createArticleElement(article) {
+        const articleCard = document.createElement('div');
+        articleCard.className = 'card mb-3';
+        
+        const articleBody = document.createElement('div');
+        articleBody.className = 'card-body';
+        
+        // 文章标题
+        const titleLink = document.createElement('a');
+        titleLink.href = `/articles/${article.id}`;
+        titleLink.className = 'text-decoration-none';
+        
+        const title = document.createElement('h5');
+        title.className = 'card-title';
+        title.textContent = article.title;
+        
+        titleLink.appendChild(title);
+        articleBody.appendChild(titleLink);
+        
+        // 文章摘要
+        const summary = document.createElement('p');
+        summary.className = 'card-text text-muted';
+        summary.textContent = article.summary || '无摘要';
+        articleBody.appendChild(summary);
+        
+        // 文章信息（日期和统计）
+        const infoRow = document.createElement('div');
+        infoRow.className = 'd-flex justify-content-between align-items-center';
+        
+        const date = document.createElement('small');
+        date.className = 'text-muted';
+        date.innerHTML = `<i class="far fa-calendar me-1"></i>${formatDate(article.createdAt)}`;
+        
+        const stats = document.createElement('div');
+        stats.innerHTML = `
+            <span class="badge bg-primary me-1"><i class="fas fa-eye me-1"></i>${article.viewCount || 0}</span>
+            <span class="badge bg-danger me-1"><i class="fas fa-heart me-1"></i>${article.likeCount || 0}</span>
+            <span class="badge bg-warning"><i class="fas fa-bookmark me-1"></i>${article.collectCount || 0}</span>
+        `;
+        
+        infoRow.appendChild(date);
+        infoRow.appendChild(stats);
+        articleBody.appendChild(infoRow);
+        
+        articleCard.appendChild(articleBody);
+        return articleCard;
+    }
+
+    /**
+     * 更新分页
+     * @param {Object} pageData - 分页数据
+     * @param {HTMLElement} paginationElement - 分页容器元素
+     * @param {Function} loadFunction - 加载函数
+     */
+    function updatePagination(pageData, paginationElement, loadFunction) {
+        paginationElement.innerHTML = '';
+        
+        const total = pageData.total;
+        const pages = pageData.pages;
+        const current = pageData.current;
+        
+        if (pages <= 1) return;  // 只有一页不显示分页
+        
+        // 上一页
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item${current === 1 ? ' disabled' : ''}`;
+        
+        const prevLink = document.createElement('a');
+        prevLink.className = 'page-link';
+        prevLink.href = '#';
+        prevLink.setAttribute('aria-label', 'Previous');
+        prevLink.innerHTML = '<span aria-hidden="true">&laquo;</span>';
+        
+        if (current > 1) {
+            prevLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                loadFunction(current - 1);
+            });
+        }
+        
+        prevLi.appendChild(prevLink);
+        paginationElement.appendChild(prevLi);
+        
+        // 页码
+        const startPage = Math.max(1, current - 2);
+        const endPage = Math.min(pages, startPage + 4);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item${i === current ? ' active' : ''}`;
+            
+            const pageLink = document.createElement('a');
+            pageLink.className = 'page-link';
+            pageLink.href = '#';
+            pageLink.textContent = i;
+            
+            if (i !== current) {
+                pageLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    loadFunction(i);
+                });
+            }
+            
+            pageLi.appendChild(pageLink);
+            paginationElement.appendChild(pageLi);
+        }
+        
+        // 下一页
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item${current === pages ? ' disabled' : ''}`;
+        
+        const nextLink = document.createElement('a');
+        nextLink.className = 'page-link';
+        nextLink.href = '#';
+        nextLink.setAttribute('aria-label', 'Next');
+        nextLink.innerHTML = '<span aria-hidden="true">&raquo;</span>';
+        
+        if (current < pages) {
+            nextLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                loadFunction(current + 1);
+            });
+        }
+        
+        nextLi.appendChild(nextLink);
+        paginationElement.appendChild(nextLi);
+    }
+
+    /**
+     * 格式化日期
+     * @param {string} dateString - 日期字符串
+     * @returns {string} 格式化的日期字符串
+     */
+    function formatDate(dateString) {
+        if (!dateString) return '未知日期';
+        
+        const date = new Date(dateString);
+        return date.toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
     // 初始化页面组件和功能
     initPage();
     setupAvatarUpload();
     setupProfileEdit();
-}); 
+});

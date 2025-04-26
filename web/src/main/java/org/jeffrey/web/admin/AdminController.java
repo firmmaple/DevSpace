@@ -8,12 +8,16 @@ import org.jeffrey.service.article.repository.entity.ArticleDO;
 import org.jeffrey.service.article.service.ArticleService;
 import org.jeffrey.service.user.repository.entity.UserDO;
 import org.jeffrey.service.user.service.UserService;
+import org.jeffrey.service.article.service.SearchService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.jeffrey.api.vo.ResVo;
+import org.jeffrey.api.vo.StatusEnum;
 
 import java.util.List;
 
@@ -26,6 +30,7 @@ public class AdminController {
 
     private final UserService userService;
     private final ArticleService articleService;
+    private final SearchService searchService;
 
     @GetMapping
     public String adminDashboard(Model model) {
@@ -68,5 +73,31 @@ public class AdminController {
         model.addAttribute("currentPage", "admin");
         model.addAttribute("viewName", "admin/users-management");
         return "redirect:/admin/users";
+    }
+
+    /**
+     * 同步文章到Elasticsearch页面
+     */
+    @GetMapping("/elasticsearch")
+    public String elasticsearchPage(Model model) {
+        model.addAttribute("title", "Elasticsearch管理 - DevSpace管理后台");
+        model.addAttribute("currentPage", "admin");
+        model.addAttribute("viewName", "admin/elasticsearch-management");
+        return "layout/main";
+    }
+    
+    /**
+     * 同步所有文章到Elasticsearch
+     */
+    @PostMapping("/elasticsearch/sync-articles")
+    @ResponseBody
+    public ResVo<Integer> syncArticlesToElasticsearch() {
+        try {
+            int count = searchService.syncAllArticles();
+            return ResVo.ok(count);
+        } catch (Exception e) {
+            log.error("同步文章到Elasticsearch失败", e);
+            return ResVo.fail(StatusEnum.UNEXPECT_ERROR, e.getMessage());
+        }
     }
 } 

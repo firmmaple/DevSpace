@@ -10,7 +10,6 @@ import org.jeffrey.service.article.repository.entity.ArticleDO;
 import org.jeffrey.service.article.service.ArticleService;
 import org.jeffrey.service.article.repository.mapper.ArticleMapper;
 import org.jeffrey.api.dto.article.*;
-// Import other necessary services (like UserService to get username)
 import org.jeffrey.service.user.repository.entity.UserDO;
 import org.jeffrey.service.user.service.UserService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -22,12 +21,19 @@ import org.jeffrey.core.event.ArticleLikeEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.jeffrey.service.article.repository.mapper.ArticleLikeMapper;
 import org.jeffrey.service.article.repository.mapper.ArticleCollectMapper;
-// Import exceptions, user service, etc.
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.jeffrey.service.article.service.CommentService;
 import lombok.extern.slf4j.Slf4j;
+
+import org.jeffrey.service.article.service.SearchService;
+import java.util.stream.Collectors;
+import org.jeffrey.service.article.repository.entity.ArticleCollectDO;
+
 import org.jeffrey.service.article.service.ArticleViewCountService;
+
 
 
 @Slf4j
@@ -40,6 +46,7 @@ public class ArticleServiceImpl implements ArticleService {
     final private ArticleLikeMapper likeMapper;
     final private ArticleCollectMapper collectMapper;
     final private CommentService commentService; // 添加CommentService依赖
+    final private SearchService searchService; // 添加SearchService依赖
     final private ArticleViewCountService viewCountService; // 添加ArticleViewCountService依赖
 
     @Override
@@ -53,6 +60,17 @@ public class ArticleServiceImpl implements ArticleService {
         articleDO.setAuthorId(authorId);
         articleDO.setStatus(0); // Default to draft
         articleMapper.insert(articleDO);
+        
+        // 如果是已发布状态，则索引到Elasticsearch
+        if (articleDO.getStatus() == 1) {
+            try {
+                searchService.indexArticle(articleDO);
+            } catch (Exception e) {
+                log.error("索引文章失败: {}", e.getMessage(), e);
+                // 索引失败不影响主流程
+            }
+        }
+        
         // Convert DO to VO, fetch author username etc.
         return convertToVO(articleDO, null); // Pass null for currentUserId initially
     }
@@ -91,6 +109,24 @@ public class ArticleServiceImpl implements ArticleService {
         existingArticle.setTitle(updateDTO.getTitle());
         // ... update other fields ...
         articleMapper.updateById(existingArticle);
+        
+        // 如果是已发布状态，则更新Elasticsearch索引
+        if (existingArticle.getStatus() == 1) {
+            try {
+                searchService.indexArticle(existingArticle);
+            } catch (Exception e) {
+                log.error("更新文章索引失败: {}", e.getMessage(), e);
+                // 索引失败不影响主流程
+            }
+        } else {
+            // 如果不是已发布状态，删除索引
+            try {
+                searchService.deleteArticleIndex(articleId);
+            } catch (Exception e) {
+                log.error("删除文章索引失败: {}", e.getMessage(), e);
+            }
+        }
+        
         return convertToVO(existingArticle, currentUserId);
     }
 
@@ -106,6 +142,15 @@ public class ArticleServiceImpl implements ArticleService {
         // Soft delete: Update status to 'deleted'
         existingArticle.setStatus(2);
         articleMapper.updateById(existingArticle);
+        
+        // 从Elasticsearch中删除索引
+        try {
+            searchService.deleteArticleIndex(articleId);
+        } catch (Exception e) {
+            log.error("删除文章索引失败: {}", e.getMessage(), e);
+            // 索引失败不影响主流程
+        }
+        
         // Or Hard delete: articleMapper.deleteById(articleId);
     }
 
@@ -198,6 +243,70 @@ public class ArticleServiceImpl implements ArticleService {
         return collectMapper.countByArticleId(articleId);
     }
 
+    @Override
+    public long countArticlesByAuthorId(Long authorId) {
+        if (authorId == null) {
+            return 0;
+        }
+        
+        // 创建查询条件
+        LambdaQueryWrapper<ArticleDO> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ArticleDO::getAuthorId, authorId);
+        queryWrapper.ne(ArticleDO::getStatus, 2); // 不统计已删除的文章
+        
+        return articleMapper.selectCount(queryWrapper);
+    }
+
+    @Override
+    public long countArticleLikesByAuthorId(Long authorId) {
+        if (authorId == null) {
+            return 0;
+        }
+        
+        // 获取作者的所有文章ID
+        LambdaQueryWrapper<ArticleDO> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ArticleDO::getAuthorId, authorId);
+        queryWrapper.ne(ArticleDO::getStatus, 2); // 不统计已删除的文章
+        List<ArticleDO> articles = articleMapper.selectList(queryWrapper);
+        
+        if (articles.isEmpty()) {
+            return 0;
+        }
+        
+        // 统计所有文章的点赞总数
+        long totalLikes = 0;
+        for (ArticleDO article : articles) {
+            totalLikes += getArticleLikeCount(article.getId());
+        }
+        
+        return totalLikes;
+    }
+
+    @Override
+    public long countArticleCollectsByAuthorId(Long authorId) {
+        if (authorId == null) {
+            return 0;
+        }
+        
+        // 获取作者的所有文章ID
+        LambdaQueryWrapper<ArticleDO> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ArticleDO::getAuthorId, authorId);
+        queryWrapper.ne(ArticleDO::getStatus, 2); // 不统计已删除的文章
+        List<ArticleDO> articles = articleMapper.selectList(queryWrapper);
+        
+        if (articles.isEmpty()) {
+            return 0;
+        }
+        
+        // 统计所有文章的收藏总数
+        long totalCollects = 0;
+        for (ArticleDO article : articles) {
+            totalCollects += getArticleCollectCount(article.getId());
+        }
+        
+        return totalCollects;
+    }
+
     // 获取文章评论数
     private Long getArticleCommentCount(Long articleId) {
         // 调用CommentService获取评论数
@@ -223,15 +332,15 @@ public class ArticleServiceImpl implements ArticleService {
         vo.setId(articleDO.getId());
         vo.setTitle(articleDO.getTitle());
         vo.setSummary(articleDO.getSummary());
-        
+
         // 如果文章内容是Markdown格式，转换为HTML
         String rawContent = articleDO.getContent();
         String htmlContent = MarkdownUtil.convertToHtml(rawContent);
         vo.setContent(htmlContent);
-        
+
         // 保存原始Markdown内容（用于编辑）
         vo.setRawContent(rawContent);
-        
+
         vo.setAuthorId(articleDO.getAuthorId());
         vo.setStatus(articleDO.getStatus());
         vo.setCreatedAt(articleDO.getCreatedAt());
@@ -246,7 +355,7 @@ public class ArticleServiceImpl implements ArticleService {
         } else {
             vo.setAuthorUsername("Unknown");
         }
-        
+
         // Get view count from the view count service
         Long viewCount = viewCountService.getViewCount(articleDO.getId());
         vo.setViewCount(viewCount);
@@ -261,8 +370,7 @@ public class ArticleServiceImpl implements ArticleService {
             vo.setLikedByCurrentUser(isArticleLikedByUser(articleDO.getId(), currentUserId));
             vo.setCollectedByCurrentUser(isArticleCollectedByUser(articleDO.getId(), currentUserId));
         }
-        
-        // Get tags
+
         vo.setTags(getArticleTags(articleDO.getId()));
         
         return vo;
@@ -282,13 +390,69 @@ public class ArticleServiceImpl implements ArticleService {
         UserDO author = userService.getById(articleDO.getAuthorId());
         summaryVO.setAuthorUsername(author != null ? author.getUsername() : "Unknown");
 
+
         // Get view count from view count service
         summaryVO.setViewCount(viewCountService.getViewCount(articleDO.getId()));
         // Get interaction counts
         summaryVO.setLikeCount(getArticleLikeCount(articleDO.getId()));
         summaryVO.setCollectCount(getArticleCollectCount(articleDO.getId()));
 
+
         return summaryVO;
+    }
+
+    @Override
+    public IPage<ArticleVO> getUserCollectedArticles(Long userId, int pageNum, int pageSize) {
+        log.info("获取用户收藏文章列表 - userId: {}, pageNum: {}, pageSize: {}", userId, pageNum, pageSize);
+        
+        // 创建Page对象
+        Page<ArticleVO> resultPage = new Page<>(pageNum, pageSize);
+        
+        try {
+            // 查询用户收藏记录
+            Page<ArticleCollectDO> collectPage = new Page<>(pageNum, pageSize);
+            LambdaQueryWrapper<ArticleCollectDO> collectQuery = new LambdaQueryWrapper<>();
+            collectQuery.eq(ArticleCollectDO::getUserId, userId);
+            collectQuery.orderByDesc(ArticleCollectDO::getCreatedAt);
+            
+            Page<ArticleCollectDO> collects = collectMapper.selectPage(collectPage, collectQuery);
+            
+            // 如果没有收藏记录，直接返回空页
+            if (collects.getRecords().isEmpty()) {
+                return resultPage;
+            }
+            
+            // 获取收藏的文章ID列表
+            List<Long> articleIds = collects.getRecords().stream()
+                .map(ArticleCollectDO::getArticleId)
+                .collect(Collectors.toList());
+            
+            // 查询文章详情
+            List<ArticleDO> articles = articleMapper.selectBatchIds(articleIds);
+            
+            // 转换为VO并维持顺序
+            List<ArticleVO> articleVOs = new ArrayList<>();
+            for (Long articleId : articleIds) {
+                articles.stream()
+                    .filter(article -> article.getId().equals(articleId))
+                    .findFirst()
+                    .ifPresent(article -> {
+                        articleVOs.add(convertToVO(article, userId));
+                    });
+            }
+            
+            // 设置结果
+            resultPage.setRecords(articleVOs);
+            resultPage.setTotal(collects.getTotal());
+            resultPage.setCurrent(collects.getCurrent());
+            resultPage.setSize(collects.getSize());
+            resultPage.setPages(collects.getPages());
+            
+            return resultPage;
+        } catch (Exception e) {
+            log.error("获取用户收藏文章列表失败", e);
+            return resultPage;
+        }
     }
 
 }

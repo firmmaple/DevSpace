@@ -102,4 +102,5 @@ public class ArticleRestController {
         articleService.uncollectArticle(id, currentUser.getUserId());
         return ResVo.ok();
     }
+    
 }

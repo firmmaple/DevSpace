@@ -4,9 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.jeffrey.core.trace.TraceLog;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * Controller for article pages
@@ -21,10 +23,16 @@ public class ArticleController {
      */
     @GetMapping
     @TraceLog("访问文章列表页面")
-    public String listArticles(Model model) {
+    public String listArticles(Model model, @RequestParam(required = false) String keyword) {
         model.addAttribute("title", "Articles - DevSpace");
         model.addAttribute("currentPage", "articles");
         model.addAttribute("viewName", "articles/list");
+        
+        // 如果有搜索关键词，传递给前端
+        if (StringUtils.hasText(keyword)) {
+            model.addAttribute("keyword", keyword);
+        }
+        
         return "layout/main";
     }
     

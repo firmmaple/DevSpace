@@ -15,6 +15,9 @@ spring:
     livereload:
       enabled: true
 
+  elasticsearch:
+    uris: localhost:9200
+
   # RabbitMQ Configuration
   rabbitmq:
     host: localhost
@@ -49,6 +52,15 @@ spring:
             scope:
               - user:email
               - read:user
+
+  data:
+    elasticsearch:
+      repositories:
+        enabled: true
+
+elasticsearch:
+  index:
+    auto-create: true
 
 app:
   file:

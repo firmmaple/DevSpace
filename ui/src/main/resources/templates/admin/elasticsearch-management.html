@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Elasticsearch管理</title>
+</head>
+<body>
+    <div th:fragment="content">
+        <div class="row my-4">
+            <div class="col">
+                <h2>管理后台 - Elasticsearch管理</h2>
+                <div class="btn-group mt-3" role="group" aria-label="Admin Sections">
+                    <a th:href="@{/admin/users}" class="btn btn-outline-primary">用户管理</a>
+                    <a th:href="@{/admin/articles}" class="btn btn-outline-primary">文章管理</a>
+                    <a th:href="@{/admin/elasticsearch}" class="btn btn-primary">Elasticsearch管理</a>
+                </div>
+            </div>
+        </div>
+        <div class="container py-4">
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">文章同步</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>同步所有已发布的文章到Elasticsearch，用于全文搜索。</p>
+                            
+                            <div class="alert alert-success d-none" id="sync-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <span id="success-message"></span>
+                            </div>
+                            
+                            <div class="alert alert-danger d-none" id="sync-error">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                <span id="error-message"></span>
+                            </div>
+                            
+                            <div id="sync-loading" class="d-none">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <span>同步中，请稍候...</span>
+                                </div>
+                            </div>
+                            
+                            <button id="sync-button" class="btn btn-primary">
+                                <i class="fas fa-sync me-2"></i>同步所有文章
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <th:block th:fragment="scripts">
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const syncButton = document.getElementById('sync-button');
+                const syncLoading = document.getElementById('sync-loading');
+                const syncSuccess = document.getElementById('sync-success');
+                const syncError = document.getElementById('sync-error');
+                const successMessage = document.getElementById('success-message');
+                const errorMessage = document.getElementById('error-message');
+                
+                syncButton.addEventListener('click', function() {
+                    // 显示加载中状态
+                    syncLoading.classList.remove('d-none');
+                    syncSuccess.classList.add('d-none');
+                    syncError.classList.add('d-none');
+                    syncButton.disabled = true;
+                    
+                    // 调用API同步文章
+                    AuthUtils.authenticatedFetch('/admin/elasticsearch/sync-articles', {
+                        method: 'POST'
+                    })
+                    .then(response => {
+                        syncLoading.classList.add('d-none');
+                        syncButton.disabled = false;
+                        
+                        if (response.status.code === 0) {
+                            // 同步成功
+                            syncSuccess.classList.remove('d-none');
+                            successMessage.textContent = `成功同步${response.result}篇文章到Elasticsearch!`;
+                        } else {
+                            // 同步失败
+                            syncError.classList.remove('d-none');
+                            errorMessage.textContent = `同步失败: ${response.status.msg}`;
+                        }
+                    })
+                    .catch(error => {
+                        syncLoading.classList.add('d-none');
+                        syncButton.disabled = false;
+                        syncError.classList.remove('d-none');
+                        errorMessage.textContent = `同步失败: ${error.message}`;
+                    });
+                });
+            });
+        </script>
+    </th:block>
+</body>
+</html> 
