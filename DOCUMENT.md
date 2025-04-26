@@ -410,6 +410,28 @@ public class UserUpdateDTO implements Serializable {
     - `GET /api/file/avatars/{filename:.+}`: 获取用户头像文件
         - Parameters: `filename` (String)
         - Response: Image file
+## 3.6 AI 聊天接口 (`/api/ai`)
+    - `POST /api/ai/chat`: 与 AI 模型聊天 (简单模式)
+        - Request Body: JSON `{"prompt": "Your question here"}`
+        - Response: `ResVo<String>` (包含 AI 的回复)
+        - **Authentication**: Required (用户必须登录)
+        - **Side Effect**: 调用配置的第三方 AI API (e.g., Sambanova).
+    - `POST /api/ai/chat/advanced`: 与 AI 模型聊天 (高级模式)
+        - Request Body: JSON `[{"role": "system", "content": "..."}, {"role": "user", "content": "..."}]`
+        - Response: `ResVo<String>` (包含 AI 的回复)
+        - **Authentication**: Required (用户必须登录)
+    - `POST /api/ai/chat/stream`: 与 AI 模型聊天 (简单模式, 流式响应)
+        - Request Body: JSON `{"prompt": "Your question here"}`
+        - Response: `text/event-stream` (SSE 格式)
+        - **Authentication**: Required (用户必须登录)
+    - `POST /api/ai/chat/stream/advanced`: 与 AI 模型聊天 (高级模式, 流式响应)
+        - Request Body: JSON `[{"role": "system", "content": "..."}, {"role": "user", "content": "..."}]`
+        - Response: `text/event-stream` (SSE 格式)
+        - **Authentication**: Required (用户必须登录)
+    - `POST /api/ai/summary`: 生成文章摘要
+        - Request Body: JSON `{"content": "Article content here..."}`
+        - Response: `ResVo<String>` (包含 AI 生成的摘要)
+        - **Authentication**: Required (用户必须登录)
 
 # 4. 数据库设计
 
@@ -483,6 +505,11 @@ public class UserUpdateDTO implements Serializable {
     - `view_count` (BIGINT, default: 0) - 浏览量
     - `updated_at` (DATETIME) - 最后更新时间
     - *建议*: 添加 `INDEX(view_count DESC)` 支持按热度排序
+
+### 后续计划
+
+-   引入布隆过滤器等机制防止恶意刷量。
+-   实现热门文章排行功能。
 
 # 5. 用户资料管理设计
 
@@ -842,3 +869,37 @@ DevSpace 实现了一个动态生成的文章目录导航功能，用于提升�
 - Redis Key (`article_views`) 应保持一致。
 - 定时任务的执行频率应根据系统负载和数据新鲜度要求调整。
 - 异常处理：同步过程中单个文章失败不应中断整个任务。
+
+# 10. AI 聊天服务集成
+
+## 10.1 概述
+
+DevSpace 集成了一个 AI 聊天服务，允许登录用户通过 REST API 与配置的 AI 模型进行交互。该功能旨在提供一个基础的 AI 对话能力，未来可扩展用于内容辅助、问答等场景。
+
+## 10.2 功能点
+
+- **API 驱动**: 
+    - 通过 `POST /api/ai/chat` (简单模式) 和 `POST /api/ai/chat/advanced` (高级模式) 端点接收用户提问。
+    - 通过 `POST /api/ai/chat/stream` 和 `POST /api/ai/chat/stream/advanced` 端点提供流式响应。
+    - 通过 `POST /api/ai/summary` 端点提供文章摘要生成功能。
+- **认证**: 要求用户必须登录才能使用此功能。
+- **后端服务**: `AIService` 抽象了与 AI 模型的交互，当前实现 (`SambanovaAIServiceImpl`) 使用 Sambanova API。
+    - 支持 `List<ChatMessageDTO>` 输入，允许更复杂的对话。
+    - 包含专门的 `getArticleSummary` 方法。
+- **配置**: AI 服务的相关配置（如 API Key、模型名称、基础 URL、是否启用流式响应）通过 `application.yml` 和环境变量管理。
+- **标准响应**: 对于非流式请求，使用统一的 `ResVo` 格式返回 AI 的回答或错误信息。
+- **异常处理**: 使用自定义运行时异常 (`AIServiceException`, `AIConfigurationException`) 进行错误管理。
+
+## 10.3 技术实现
+
+- **Controller**: `AIChatController` 处理 API 请求，进行权限验证，调用服务。
+- **Service**: `AIService` 接口和 `SambanovaAIServiceImpl` 实现，使用 `RestTemplate` 调用外部 API。
+- **Configuration**: `SambanovaProperties` 类加载 `ai.sambanova.*` 配置。
+- **DTOs**: 定义了 `ChatRequestDTO`, `ChatMessageDTO`, `ChatResponseDTO` 等用于 API 交互。
+- **Exceptions**: 定义了 `AIServiceException` 和 `AIConfigurationException` 运行时异常。
+
+## 10.4 注意事项
+
+- **API Key 安全**: Sambanova API Key 需要通过环境变量 `SAMBANOVA_API_KEY` 设置，不应硬编码或提交到版本控制。
+- **成本与限制**: 使用第三方 AI API 可能涉及成本和使用限制，需要注意监控。
+- **错误处理**: 服务实现和控制器包含对 API 调用失败和配置错误的健壮处理。控制器层捕获自定义运行时异常并返回适当的错误响应。

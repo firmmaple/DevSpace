@@ -32,6 +32,7 @@ DevSpace
 - HandlerExceptionResolver + @RestControllerAdvice (已使用，用于全局异常处理)
 - AOP + TraceID (已实现，用于日志记录)
 - Spring Scheduling (已使用，用于定时任务)
+- Spring RestTemplate (已使用，用于AI服务API调用)
 
 ## 项目结构
 
@@ -695,6 +696,63 @@ DevSpace 实现了一个基于 Redis 缓存和 MySQL 持久化的文章浏览量
 
 -   引入布隆过滤器等机制防止恶意刷量。
 -   实现热门文章排行功能。
+
+## 3.11 AI 聊天服务 (AI Chat Service)
+
+DevSpace 集成了一个 AI 聊天服务，允许登录用户与 AI 模型进行交互。
+
+### 已实现功能
+
+1.  **AI 对话**: 
+    *   提供 `POST /api/ai/chat` REST API 端点 (接收 `prompt` 字符串)。
+    *   提供 `POST /api/ai/chat/advanced` REST API 端点 (接收 `List<ChatMessageDTO>`)，支持更复杂的对话场景。
+    *   提供 `POST /api/ai/chat/stream` 和 `POST /api/ai/chat/stream/advanced` 流式响应端点 (SSE 格式)。
+    *   登录用户可以发送请求与 AI 对话。
+    *   后端通过 `AIService` 调用配置的第三方 AI API (当前为 Sambanova)。
+2.  **文章摘要**: 
+    *   提供 `POST /api/ai/summary` 端点，接收文章内容并返回 AI 生成的摘要。
+3.  **配置化**: 
+    *   AI 服务通过 `application.yml` 中的 `ai.sambanova` 配置项进行配置（API Key 通过环境变量 `SAMBANOVA_API_KEY` 设置）。
+    *   支持通过 `streamingEnabled` 配置项启用或禁用流式响应。
+4.  **错误处理**: 
+    *   控制器层处理 API 调用异常和配置错误，返回标准的 `ResVo` 错误响应。
+    *   使用自定义运行时异常 (`AIServiceException`, `AIConfigurationException`) 进行更精细的错误管理。
+
+### 技术实现
+
+1.  **服务层 (`AIService`, `SambanovaAIServiceImpl`)**: 
+    *   定义服务接口和基于 Sambanova API 的实现。
+    *   支持接收 `String prompt` 或 `List<ChatMessageDTO>` 作为输入。
+    *   实现了 `getArticleSummary` 方法用于生成文章摘要。
+    *   使用 `RestTemplate` 发送 HTTP 请求。
+    *   从 `SambanovaProperties` 读取配置。
+    *   需要配置环境变量 `SAMBANOVA_API_KEY`。
+2.  **控制器 (`AIChatController`)**: 
+    *   处理 `/api/ai/chat`, `/api/ai/chat/advanced`, `/api/ai/summary`, `/api/ai/chat/stream`, `/api/ai/chat/stream/advanced` 请求。
+    *   验证用户是否已登录 (`@PreAuthorize("isAuthenticated()")`)。
+    *   调用 `AIService` 并封装响应。
+3.  **配置 (`SambanovaProperties`)**: 
+    *   绑定 `application.yml` 中的 `ai.sambanova` 配置。
+4.  **DTOs (`api/dto/ai`)**: 
+    *   定义与 Sambanova API 交互所需的数据传输对象。
+5.  **异常 (`api/exception/exception`)**: 
+    *   定义了 `AIServiceException` 和 `AIConfigurationException` 运行时异常。
+
+### 代码位置
+
+-   **控制器**: `web/src/main/java/org/jeffrey/web/ai/AIChatController.java`
+-   **服务**: 
+    -   `service/src/main/java/org/jeffrey/service/ai/service/AIService.java`
+    -   `service/src/main/java/org/jeffrey/service/ai/service/impl/SambanovaAIServiceImpl.java`
+-   **配置**: `service/src/main/java/org/jeffrey/service/ai/config/SambanovaProperties.java`
+-   **DTOs**: `api/src/main/java/org/jeffrey/api/dto/ai/`
+-   **异常**: `api/src/main/java/org/jeffrey/api/exception/exception/`
+-   **配置文件**: `web/src/main/resources/application.yml` (片段)
+
+### 后续计划
+
+-   添加前端 UI 界面以方便使用 AI 聊天功能。
+-   允许选择不同的 AI 模型。
 
 
 

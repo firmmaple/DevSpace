@@ -79,3 +79,13 @@ knife4j:
 #        api-rule: package
 #        api-rule-resources:
 #          - com.github.paicoding.forum.web.front
+
+# AI Service Configuration
+ai:
+  sambanova:
+    # API Key is expected to be set via environment variable: SAMBANOVA_API_KEY
+    apiKey: 357cf5ec-9921-4529-8b0a-9fd28413d0d1
+    # apiKey: c0200d40-6bfe-4787-9a93-1afe0ef739c3
+    baseUrl: https://api.sambanova.ai/v1/ # Default is set in SambanovaProperties
+    model: Meta-Llama-3.1-405B-Instruct # Default is set in SambanovaProperties
+    streamingEnabled: true # Enable streaming mode for responses
