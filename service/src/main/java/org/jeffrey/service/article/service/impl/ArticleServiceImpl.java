@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.jeffrey.service.article.service.CommentService;
 import lombok.extern.slf4j.Slf4j;
+import org.jeffrey.service.article.service.ArticleViewCountService;
 
 
 @Slf4j
@@ -39,6 +40,7 @@ public class ArticleServiceImpl implements ArticleService {
     final private ArticleLikeMapper likeMapper;
     final private ArticleCollectMapper collectMapper;
     final private CommentService commentService; // 添加CommentService依赖
+    final private ArticleViewCountService viewCountService; // 添加ArticleViewCountService依赖
 
     @Override
     @TraceLog("创建文章") // Use your AOP logging
@@ -63,8 +65,15 @@ public class ArticleServiceImpl implements ArticleService {
             // Throw custom exception or return null/fail ResVo
             throw new ResourceNotFoundException("Article not found with ID: " + articleId);
         }
-        // TODO: Increment view count here (Phase 2)
-        return convertToVO(articleDO, currentUserId);
+        
+        // Increment view count for this article
+        Long viewCount = viewCountService.incrementViewCount(articleId);
+        
+        ArticleVO articleVO = convertToVO(articleDO, currentUserId);
+        // Set view count from Redis
+        articleVO.setViewCount(viewCount);
+        
+        return articleVO;
     }
 
     @Override
@@ -236,21 +245,26 @@ public class ArticleServiceImpl implements ArticleService {
             vo.setAuthorBio(author.getBio());  // 设置作者简介
         } else {
             vo.setAuthorUsername("Unknown");
-            vo.setAuthorAvatarUrl(null);
-            vo.setAuthorBio(null);
         }
-
-        // Use real data from our new methods instead of placeholders
-        vo.setViewCount(5L); // TODO: Implement view counting
-        vo.setLikeCount(getArticleLikeCount(articleDO.getId())); 
-        vo.setCollectCount(getArticleCollectCount(articleDO.getId())); 
-        vo.setCommentCount(getArticleCommentCount(articleDO.getId()));  // 设置评论数
-        vo.setLikedByCurrentUser(isArticleLikedByUser(articleDO.getId(), currentUserId));
-        vo.setCollectedByCurrentUser(isArticleCollectedByUser(articleDO.getId(), currentUserId));
-
-        // 设置文章标签
+        
+        // Get view count from the view count service
+        Long viewCount = viewCountService.getViewCount(articleDO.getId());
+        vo.setViewCount(viewCount);
+        
+        // Get interaction counts and status
+        vo.setLikeCount(getArticleLikeCount(articleDO.getId()));
+        vo.setCollectCount(getArticleCollectCount(articleDO.getId()));
+        vo.setCommentCount(getArticleCommentCount(articleDO.getId()));
+        
+        // Set current user's interaction status
+        if (currentUserId != null) {
+            vo.setLikedByCurrentUser(isArticleLikedByUser(articleDO.getId(), currentUserId));
+            vo.setCollectedByCurrentUser(isArticleCollectedByUser(articleDO.getId(), currentUserId));
+        }
+        
+        // Get tags
         vo.setTags(getArticleTags(articleDO.getId()));
-
+        
         return vo;
     }
 
@@ -268,10 +282,11 @@ public class ArticleServiceImpl implements ArticleService {
         UserDO author = userService.getById(articleDO.getAuthorId());
         summaryVO.setAuthorUsername(author != null ? author.getUsername() : "Unknown");
 
-        // TODO: Populate interaction counts (Phase 2)
-        summaryVO.setViewCount(0L); // Placeholder
-        summaryVO.setLikeCount(0L); // Placeholder
-        summaryVO.setCollectCount(0L); // Placeholder
+        // Get view count from view count service
+        summaryVO.setViewCount(viewCountService.getViewCount(articleDO.getId()));
+        // Get interaction counts
+        summaryVO.setLikeCount(getArticleLikeCount(articleDO.getId()));
+        summaryVO.setCollectCount(getArticleCollectCount(articleDO.getId()));
 
         return summaryVO;
     }

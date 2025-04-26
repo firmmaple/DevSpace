@@ -27,10 +27,11 @@ DevSpace
 - Spring Security 6.x (使用 JWT Cookie 进行认证和授权，支持 OAuth2)
 - MyBatis, MyBatis-Plus (已使用)
 - MySQL
-- Redis (已使用，用于存储在线用户)
+- Redis (已使用，用于存储在线用户、文章浏览量缓存)
 - RabbitMQ (计划使用，用于评论、点赞、收藏等异步处理)
 - HandlerExceptionResolver + @RestControllerAdvice (已使用，用于全局异常处理)
 - AOP + TraceID (已实现，用于日志记录)
+- Spring Scheduling (已使用，用于定时任务)
 
 ## 项目结构
 
@@ -52,8 +53,9 @@ DevSpace
 │   └── src/main/java/org/jeffrey/service/
 │       ├── security/    # Spring Security 配置、过滤器、服务、处理器
 │       ├── user/        # 用户服务、仓库 (Mapper/Entity)
-│       ├── article/     # 文章服务、仓库 (Mapper/Entity)
+│       ├── article/     # 文章服务、仓库 (Mapper/Entity, ViewCountDO/Mapper)
 │       ├── file/        # 文件服务 (LocalFileServiceImpl)
+│       ├── scheduler/   # 定时任务 (ArticleViewCountSyncScheduler)
 │       └── *.java       # 配置类 (MybatisPlusConfig, ServiceAutoConfig)
 ├── ui/              # 前端资源
 │   └── src/main/resources/
@@ -641,6 +643,58 @@ DevSpace 使用 Java 的 Long 类型作为实体 ID，采用特定策略处理 J
 - 避免使用 `parseInt()` 或 `Number()` 等转换 ID
 - DOM 属性中保持 ID 的字符串形式
 - 必要时使用 `BigInt` 类型处理大整数运算
+
+## 3.10 文章浏览量统计系统 (Article View Count System)
+
+DevSpace 实现了一个基于 Redis 缓存和 MySQL 持久化的文章浏览量统计系统。
+
+### 已实现功能
+
+1.  **浏览量计数**:
+    *   每次成功访问文章详情页 (`/api/articles/{id}`) 时，自动增加该文章的浏览量。
+    *   使用 Redis Hash 结构 (`article_views`) 实时存储和更新浏览量，性能高。
+2.  **数据展示**:
+    *   文章详情页和文章列表页均显示准确的文章浏览量。
+3.  **持久化与同步**:
+    *   新增 `article_viewcount` 表用于持久化存储浏览量。
+    *   通过 `ArticleViewCountSyncScheduler` 定时任务：
+        *   每 5 分钟将 Redis 中的浏览量增量同步到 MySQL 数据库。
+        *   每天凌晨 2 点执行一次全量同步，确保数据最终一致性。
+4.  **缓存策略**:
+    *   读取浏览量时优先从 Redis 获取。
+    *   若 Redis 中不存在，则从数据库加载并回填到 Redis 缓存。
+
+### 技术实现
+
+1.  **Redis 缓存 (`RedisClient`)**:
+    *   使用 Hash (`article_views`) 存储 `articleId -> viewCount` 映射。
+    *   利用 `hIncr` 原子操作增加浏览量。
+2.  **MySQL 持久化**:
+    *   `article_viewcount` 表存储最终的浏览量数据。
+    *   `ArticleViewCountMapper` 提供数据库操作。
+3.  **服务层 (`ArticleViewCountService`)**:
+    *   封装浏览量获取 (`getViewCount`) 和增加 (`incrementViewCount`) 逻辑。
+    *   提供数据同步方法 (`syncViewCountsToDatabase`)。
+4.  **定时调度 (`ArticleViewCountSyncScheduler`)**:
+    *   使用 Spring `@Scheduled` 注解配置定时任务。
+    *   分离调度逻辑，提高模块化。
+5.  **业务集成 (`ArticleServiceImpl`)**:
+    *   在 `getArticleById` 方法中调用 `incrementViewCount`。
+    *   在 `convertToVO` 和 `convertToSummaryVO` 中调用 `getViewCount` 获取浏览量。
+
+### 代码位置
+
+-   **调度器**: `service/src/main/java/org/jeffrey/service/scheduler/ArticleViewCountSyncScheduler.java`
+-   **服务**: `service/src/main/java/org/jeffrey/service/article/service/impl/ArticleViewCountServiceImpl.java`
+-   **实体**: `service/src/main/java/org/jeffrey/service/article/repository/entity/ArticleViewCountDO.java`
+-   **Mapper**: `service/src/main/java/org/jeffrey/service/article/repository/mapper/ArticleViewCountMapper.java`
+-   **数据库脚本**: `web/src/main/resources/db/init.sql`
+-   **Redis 客户端**: `core/src/main/java/org/jeffrey/core/cache/RedisClient.java`
+
+### 后续计划
+
+-   引入布隆过滤器等机制防止恶意刷量。
+-   实现热门文章排行功能。
 
 
 

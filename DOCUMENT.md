@@ -201,16 +201,24 @@ public class ArticleVO implements Serializable {
     private Long id;
     private String title;
     private String summary;
-    private String content; 
+    private String content; // HTML for display
+    private String rawContent; // Markdown for editing
     @JsonSerialize(using = ToStringSerializer.class)
     private Long authorId;
     private String authorUsername; 
+    private String authorAvatarUrl;
+    private String authorBio;
     private Integer status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Long viewCount;
-    private Long likeCount;
-    private Long collectCount;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long viewCount; // From Redis/DB ViewCount Service
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long likeCount; // From Like Service/DB
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long collectCount; // From Collect Service/DB
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long commentCount; // From Comment Service/DB
     private Boolean likedByCurrentUser;
     private Boolean collectedByCurrentUser;
     private List<String> tags;
@@ -227,9 +235,12 @@ public class ArticleSummaryVO implements Serializable {
     private String authorUsername;
     private Integer status;
     private LocalDateTime createdAt;
-    private Long viewCount;
-    private Long likeCount;
-    private Long collectCount;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long viewCount; // From Redis/DB ViewCount Service
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long likeCount; // From Like Service/DB
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long collectCount; // From Collect Service/DB
     private List<String> tags;
 }
 
@@ -347,11 +358,12 @@ public class UserUpdateDTO implements Serializable {
             - `status` (Integer, optional): 按状态筛选 (1: 已发布, 0: 草稿)
             - `tag` (String, optional): 按标签筛选
             - `keyword` (String, optional): 按标题或内容搜索
-        - Response: `ResVo<IPage<ArticleSummaryVO>>`
+        - Response: `ResVo<IPage<ArticleSummaryVO>>` (Includes accurate `viewCount`)
     - `GET /api/articles/{id}`: 获取文章详情
         - Parameters:
             - `id` (Long): 文章ID (字符串形式)
-        - Response: `ResVo<ArticleVO>`
+        - Response: `ResVo<ArticleVO>` (Includes accurate `viewCount`)
+        - **Side Effect**: Increments the view count for the article in Redis.
     - `POST /api/articles`: 创建文章
         - Request Body: `ArticleCreateDTO` (不包含 `summary`)
         - Response: `ResVo<ArticleVO>`
@@ -464,6 +476,13 @@ public class UserUpdateDTO implements Serializable {
     - `create_time` (DATETIME)
     - `update_time` (DATETIME)
     - `deleted` (BOOLEAN, default: false)
+
+- **文章浏览量表 (`t_article_viewcount`)**
+    - `id` (BIGINT, PK)
+    - `article_id` (BIGINT, UK) - 文章ID
+    - `view_count` (BIGINT, default: 0) - 浏览量
+    - `updated_at` (DATETIME) - 最后更新时间
+    - *建议*: 添加 `INDEX(view_count DESC)` 支持按热度排序
 
 # 5. 用户资料管理设计
 
@@ -753,3 +772,73 @@ DevSpace 实现了一个动态生成的文章目录导航功能，用于提升�
 - **动态更新**：仅在页面初始加载时生成目录，无需在阅读过程中重新计算。
 - **小屏适配**：在移动设备上提供内联折叠式目录，点击后展开，再次点击折叠。
 - **交互优化**：添加了目录项的悬停效果和当前位置指示，提升用户体验。
+
+# 9. 文章浏览量统计系统设计
+
+## 9.1 概述
+
+为跟踪文章的受欢迎程度，系统实现了基于Redis缓存和MySQL持久化的浏览量统计功能。
+
+## 9.2 功能点
+
+- **实时计数**: 访问文章详情页时，通过Redis `HINCRBY` 原子操作增加浏览量。
+- **高效读取**: API响应（文章详情、列表）直接从Redis或数据库获取最新浏览量。
+- **数据持久化**: 定期将Redis中的浏览量同步到MySQL的`t_article_viewcount`表。
+- **最终一致性**: 通过定时任务确保缓存与数据库数据最终保持一致。
+
+## 9.3 技术实现
+
+### 9.3.1 缓存层 (Redis)
+
+- **数据结构**: 使用Redis Hash结构，Key为`article_views`。
+- **字段**: Hash的Field为文章ID (字符串)，Value为对应的浏览量 (数值)。
+- **操作**: 
+    - 增加: `HINCRBY article_views <articleId> 1`
+    - 获取单个: `HGET article_views <articleId>`
+    - 获取所有: `HGETALL article_views` (用于同步)
+- **客户端**: `core/src/main/java/org/jeffrey/core/cache/RedisClient.java`
+
+### 9.3.2 持久化层 (MySQL)
+
+- **数据表**: `t_article_viewcount` (字段见 #4 数据库设计)。
+- **Mapper**: `service/src/main/java/org/jeffrey/service/article/repository/mapper/ArticleViewCountMapper.java` (基于MyBatis-Plus)
+
+### 9.3.3 服务层 (`ArticleViewCountService`)
+
+- **接口**: `service/src/main/java/org/jeffrey/service/article/service/ArticleViewCountService.java`
+- **实现**: `service/src/main/java/org/jeffrey/service/article/service/impl/ArticleViewCountServiceImpl.java`
+    - `incrementViewCount(articleId)`: 调用Redis `hIncr`。
+    - `getViewCount(articleId)`: 优先读Redis，失败则读DB并回填Redis。
+    - `syncViewCountsToDatabase()`: 核心同步逻辑，由调度器调用。
+
+### 9.3.4 定时调度 (`ArticleViewCountSyncScheduler`)
+
+- **类**: `service/src/main/java/org/jeffrey/service/scheduler/ArticleViewCountSyncScheduler.java`
+- **职责**: 负责按计划调用`ArticleViewCountService.syncViewCountsToDatabase()`。
+- **策略**: 
+    - `@Scheduled(fixedRate = 300000)`: 每5分钟执行一次。
+    - `@Scheduled(cron = "0 0 2 * * *")`: 每天凌晨2点执行一次。
+- **配置**: 需要在配置类 (如 `ServiceAutoConfig`) 上添加 `@EnableScheduling`。
+
+### 9.3.5 业务集成 (`ArticleServiceImpl`)
+
+- `getArticleById()`: 在返回文章详情前调用 `incrementViewCount()`。
+- `convertToVO()` / `convertToSummaryVO()`: 调用 `getViewCount()` 填充VO中的 `viewCount` 字段。
+
+## 9.4 数据同步流程
+
+1. `ArticleViewCountSyncScheduler` 按计划触发。
+2. 调用 `ArticleViewCountService.syncViewCountsToDatabase()`。
+3. 服务层调用 `RedisClient.hGetAll("article_views")` 获取Redis中所有文章的浏览量。
+4. 遍历获取到的Map。
+5. 对每个 `articleId`：
+    a. 查询 `t_article_viewcount` 表中是否存在记录。
+    b. 如果存在，更新 `view_count` 字段。
+    c. 如果不存在，插入新记录。
+6. 记录同步日志。
+
+## 9.5 注意事项
+
+- Redis Key (`article_views`) 应保持一致。
+- 定时任务的执行频率应根据系统负载和数据新鲜度要求调整。
+- 异常处理：同步过程中单个文章失败不应中断整个任务。
