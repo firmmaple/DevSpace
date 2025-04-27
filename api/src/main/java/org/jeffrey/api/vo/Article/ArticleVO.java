@@ -16,12 +16,14 @@ public class ArticleVO implements Serializable { // For detailed view
     private String summary;
     private String content; // HTML content for display
     private String rawContent; // Original Markdown content for editing
+    private String imageUrl; // 文章封面图片URL
     @JsonSerialize(using = ToStringSerializer.class)
     private Long authorId;
     private String authorUsername; // Populate this in the service layer
     private String authorAvatarUrl; // Author's avatar URL
     private String authorBio; // Author's bio
     private Integer status;
+    private Boolean isHot; // 是否为热门文章
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     // Add interaction counts later (views, likes, collects)

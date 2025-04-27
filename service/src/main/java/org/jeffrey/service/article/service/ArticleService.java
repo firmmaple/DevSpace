@@ -17,6 +17,14 @@ public interface ArticleService {
 
     IPage<ArticleSummaryVO> listArticles(int pageNum, int pageSize, Long authorId, Integer status); // Add filtering/sorting params
     
+    /**
+     * 获取热门文章列表
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @return 热门文章分页结果
+     */
+    IPage<ArticleSummaryVO> getHotArticles(int pageNum, int pageSize);
+    
     // Article interaction methods
     void likeArticle(Long articleId, Long userId);
     
@@ -70,4 +78,12 @@ public interface ArticleService {
      * @return 是否删除成功
      */
     boolean deleteArticleById(Long articleId);
+    
+    /**
+     * 切换文章的热门状态
+     * @param articleId 文章ID
+     * @param isHot 是否设为热门
+     * @return 是否操作成功
+     */
+    boolean toggleArticleHotStatus(Long articleId, Boolean isHot);
 }

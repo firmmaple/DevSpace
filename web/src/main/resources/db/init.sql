@@ -22,12 +22,15 @@ CREATE TABLE `article` (
   `title` VARCHAR(255) NOT NULL COMMENT '文章标题',
   `summary` VARCHAR(512) DEFAULT NULL COMMENT '文章摘要',
   `content` LONGTEXT NOT NULL COMMENT '文章内容 (Markdown or HTML)',
+  `image_url` VARCHAR(512) DEFAULT NULL COMMENT '文章封面图片URL',
   `author_id` BIGINT NOT NULL COMMENT '作者用户ID',
   `status` TINYINT DEFAULT 0 COMMENT '文章状态 (0:草稿, 1:已发布, 2:已删除)',
+  `is_hot` TINYINT(1) DEFAULT 0 COMMENT '是否为热门文章 (0:否, 1:是)',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   INDEX `idx_author_id` (`author_id`),
-  INDEX `idx_status_created` (`status`, `created_at`) -- For fetching published articles sorted by time
+  INDEX `idx_status_created` (`status`, `created_at`), -- For fetching published articles sorted by time
+  INDEX `idx_is_hot` (`is_hot`, `created_at`) -- For fetching hot articles
   -- Maybe add FULLTEXT index later for basic search: FULLTEXT KEY `idx_title_content` (`title`,`content`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章表';
 

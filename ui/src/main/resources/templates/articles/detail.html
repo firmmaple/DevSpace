@@ -47,6 +47,11 @@
                     <!-- Article Content -->
                     <div class="card mb-4">
                         <div class="card-body">
+                            <!-- 文章封面图片 -->
+                            <div id="article-image-container" class="mb-4 text-center d-none">
+                                <img id="article-image" src="" alt="Article cover" class="img-fluid rounded" style="max-height: 350px;">
+                            </div>
+                            
                             <div id="article-content" class="article-content">
                                 <!-- Article content will go here -->
                             </div>
@@ -90,7 +95,7 @@
                         <div class="card-body">
                             <!-- Comment Form - only visible when logged in -->
                             <div id="comment-form-container" class="mb-4 auth-required force-hide">
-                                <form id="comment-form">
+                                <form id="comment-form" class="col-md-8">
                                     <div class="mb-3">
                                         <textarea id="comment-content" class="form-control" rows="3" placeholder="Write your comment here..."></textarea>
                                     </div>

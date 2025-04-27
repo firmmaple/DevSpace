@@ -8,6 +8,7 @@ import org.jeffrey.api.vo.User.UserVO;
 import org.jeffrey.core.trace.TraceLog;
 import org.jeffrey.service.article.service.ArticleService;
 import org.jeffrey.service.user.service.UserService;
+import org.jeffrey.service.user.repository.entity.UserDO;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -75,6 +76,32 @@ public class AdminRestController {
         } catch (Exception e) {
             log.error("获取用户详情失败: " + userId, e);
             return ResVo.fail(StatusEnum.UNEXPECT_ERROR, "获取用户详情失败: " + e.getMessage());
+        }
+    }
+
+    @TraceLog("管理员切换用户管理员权限")
+    @PutMapping("/users/{userId}/admin")
+    public ResVo<Boolean> toggleAdminStatus(@PathVariable String userId, @RequestParam Boolean isAdmin) {
+        try {
+            Long id = Long.parseLong(userId);
+            UserDO user = userService.getById(id);
+            if (user == null) {
+                return ResVo.fail(StatusEnum.ILLEGAL_ARGUMENTS, "用户不存在");
+            }
+            
+            user.setIsAdmin(isAdmin);
+            boolean result = userService.updateById(user);
+            
+            if (result) {
+                return ResVo.ok(true);
+            } else {
+                return ResVo.fail(StatusEnum.UNEXPECT_ERROR, "更新用户管理员权限失败");
+            }
+        } catch (NumberFormatException e) {
+            return ResVo.fail(StatusEnum.ILLEGAL_ARGUMENTS, "用户ID格式不正确");
+        } catch (Exception e) {
+            log.error("更新用户管理员权限失败: " + userId, e);
+            return ResVo.fail(StatusEnum.UNEXPECT_ERROR, "更新用户管理员权限失败: " + e.getMessage());
         }
     }
 } 

@@ -41,8 +41,8 @@ public class SambanovaAIServiceImpl implements AIService {
     private String apiKey;
 
     private static final String SYSTEM_SUMMARY_PROMPT =
-        "You are an AI assistant tasked with generating summaries of articles. " +
-        "Generate a summary that captures the main points of the article in 2-4 sentences. " +
+        "You are an AI assistant tasked with generating concise, informative summaries of articles. " +
+        "Generate a summary that captures the main points of the article in 1-2 sentences. " +
         "The summary should be clear, objective, and highlight the most important information. " +
         "Do not include your own opinions or comments about the article. " +
         "Focus only on what is contained in the original text. " +

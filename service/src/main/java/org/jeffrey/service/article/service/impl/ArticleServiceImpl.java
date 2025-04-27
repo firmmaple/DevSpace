@@ -33,21 +33,44 @@ import java.util.stream.Collectors;
 import org.jeffrey.service.article.repository.entity.ArticleCollectDO;
 
 import org.jeffrey.service.article.service.ArticleViewCountService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 
 
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ArticleServiceImpl implements ArticleService {
-    final private ArticleMapper articleMapper;
-    final private UserService userService; // Inject user service to get author details
-    final private ApplicationEventPublisher eventPublisher;
-    final private ArticleLikeMapper likeMapper;
-    final private ArticleCollectMapper collectMapper;
-    final private CommentService commentService; // 添加CommentService依赖
-    final private SearchService searchService; // 添加SearchService依赖
-    final private ArticleViewCountService viewCountService; // 添加ArticleViewCountService依赖
+    private final ArticleMapper articleMapper;
+    private final UserService userService; // Inject user service to get author details
+    private final ApplicationEventPublisher eventPublisher;
+    private final ArticleLikeMapper likeMapper;
+    private final ArticleCollectMapper collectMapper;
+    private final SearchService searchService; // 添加SearchService依赖
+    private final ArticleViewCountService viewCountService; // 添加ArticleViewCountService依赖
+    
+    // 使用懒加载和字段注入方式解决循环依赖
+    @Autowired
+    @Lazy
+    private CommentService commentService; // 添加CommentService依赖
+    
+    // 使用构造函数注入除CommentService外的其他依赖
+    public ArticleServiceImpl(
+            ArticleMapper articleMapper,
+            UserService userService,
+            ApplicationEventPublisher eventPublisher,
+            ArticleLikeMapper likeMapper,
+            ArticleCollectMapper collectMapper,
+            SearchService searchService,
+            ArticleViewCountService viewCountService) {
+        this.articleMapper = articleMapper;
+        this.userService = userService;
+        this.eventPublisher = eventPublisher;
+        this.likeMapper = likeMapper;
+        this.collectMapper = collectMapper;
+        this.searchService = searchService;
+        this.viewCountService = viewCountService;
+    }
 
     @Override
     @TraceLog("创建文章") // Use your AOP logging
@@ -57,6 +80,7 @@ public class ArticleServiceImpl implements ArticleService {
         articleDO.setTitle(createDTO.getTitle());
         articleDO.setSummary(createDTO.getSummary());
         articleDO.setContent(createDTO.getContent());
+        articleDO.setImageUrl(createDTO.getImageUrl()); // 设置文章图片URL
         articleDO.setAuthorId(authorId);
         articleDO.setStatus(0); // Default to draft
         articleMapper.insert(articleDO);
@@ -83,19 +107,19 @@ public class ArticleServiceImpl implements ArticleService {
             // Throw custom exception or return null/fail ResVo
             throw new ResourceNotFoundException("Article not found with ID: " + articleId);
         }
-
+        
         Long viewCount = 0L;
         if(currentUserId!= null){
-            // Increment view count for this article
+        // Increment view count for this article
             // 如果currentUserId为null，说明并不是用户访问， 可能是编辑文章
             viewCount = viewCountService.incrementViewCount(articleId);
         }
-
+        
         viewCount = viewCountService.getViewCount(articleId);
         ArticleVO articleVO = convertToVO(articleDO, currentUserId);
         // Set view count from Redis
         articleVO.setViewCount(viewCount);
-
+        
         return articleVO;
     }
 
@@ -335,78 +359,71 @@ public class ArticleServiceImpl implements ArticleService {
 
     // --- Helper Methods ---
     private ArticleVO convertToVO(ArticleDO articleDO, Long currentUserId) {
-        if (articleDO == null) return null;
         ArticleVO vo = new ArticleVO();
         vo.setId(articleDO.getId());
         vo.setTitle(articleDO.getTitle());
         vo.setSummary(articleDO.getSummary());
-
-        // 如果文章内容是Markdown格式，转换为HTML
-        String rawContent = articleDO.getContent();
-        String htmlContent = MarkdownUtil.convertToHtml(rawContent);
-        vo.setContent(htmlContent);
-
-        // 保存原始Markdown内容（用于编辑）
-        vo.setRawContent(rawContent);
-
+        vo.setContent(MarkdownUtil.convertToHtml(articleDO.getContent())); // Convert MD to HTML
+        vo.setRawContent(articleDO.getContent()); // Store original Markdown
+        vo.setImageUrl(articleDO.getImageUrl()); // 设置封面图片URL
         vo.setAuthorId(articleDO.getAuthorId());
         vo.setStatus(articleDO.getStatus());
+        vo.setIsHot(articleDO.getIsHot()); // 复制热门状态
         vo.setCreatedAt(articleDO.getCreatedAt());
         vo.setUpdatedAt(articleDO.getUpdatedAt());
 
-        // Fetch and set author information
-        UserDO author = userService.getById(articleDO.getAuthorId()); // Assuming you have this method
+        // Get author username and other info
+        UserDO author = userService.getById(articleDO.getAuthorId());
         if (author != null) {
             vo.setAuthorUsername(author.getUsername());
-            vo.setAuthorAvatarUrl(author.getAvatarUrl());  // 设置作者头像URL
-            vo.setAuthorBio(author.getBio());  // 设置作者简介
-        } else {
-            vo.setAuthorUsername("Unknown");
+            vo.setAuthorAvatarUrl(author.getAvatarUrl());
+            vo.setAuthorBio(author.getBio());
         }
-
-        // Get view count from the view count service
-        Long viewCount = viewCountService.getViewCount(articleDO.getId());
-        vo.setViewCount(viewCount);
         
-        // Get interaction counts and status
+        // Get interaction counts
         vo.setLikeCount(getArticleLikeCount(articleDO.getId()));
         vo.setCollectCount(getArticleCollectCount(articleDO.getId()));
         vo.setCommentCount(getArticleCommentCount(articleDO.getId()));
         
-        // Set current user's interaction status
+        // Get interaction status for current user if logged in
         if (currentUserId != null) {
             vo.setLikedByCurrentUser(isArticleLikedByUser(articleDO.getId(), currentUserId));
             vo.setCollectedByCurrentUser(isArticleCollectedByUser(articleDO.getId(), currentUserId));
         }
 
+        // Get article tags (placeholder for now)
         vo.setTags(getArticleTags(articleDO.getId()));
-
+        
         return vo;
     }
 
     private ArticleSummaryVO convertToSummaryVO(ArticleDO articleDO) {
-        if (articleDO == null) return null;
-        ArticleSummaryVO summaryVO = new ArticleSummaryVO();
-        // BeanUtils.copyProperties(articleDO, summaryVO, "content"); // Exclude content
-        summaryVO.setId(articleDO.getId());
-        summaryVO.setTitle(articleDO.getTitle());
-        summaryVO.setSummary(articleDO.getSummary());
-        summaryVO.setAuthorId(articleDO.getAuthorId());
-        summaryVO.setCreatedAt(articleDO.getCreatedAt());
-        summaryVO.setStatus(articleDO.getStatus());
+        ArticleSummaryVO vo = new ArticleSummaryVO();
+        vo.setId(articleDO.getId());
+        vo.setTitle(articleDO.getTitle());
+        vo.setSummary(articleDO.getSummary());
+        vo.setImageUrl(articleDO.getImageUrl()); // 设置封面图片URL
+        vo.setAuthorId(articleDO.getAuthorId());
+        vo.setStatus(articleDO.getStatus());
+        vo.setIsHot(articleDO.getIsHot()); // 复制热门状态
+        vo.setCreatedAt(articleDO.getCreatedAt());
 
+        // Get author username
         UserDO author = userService.getById(articleDO.getAuthorId());
-        summaryVO.setAuthorUsername(author != null ? author.getUsername() : "Unknown");
+        if (author != null) {
+            vo.setAuthorUsername(author.getUsername());
+        }
 
-
-        // Get view count from view count service
-        summaryVO.setViewCount(viewCountService.getViewCount(articleDO.getId()));
         // Get interaction counts
-        summaryVO.setLikeCount(getArticleLikeCount(articleDO.getId()));
-        summaryVO.setCollectCount(getArticleCollectCount(articleDO.getId()));
-
-
-        return summaryVO;
+        vo.setLikeCount(getArticleLikeCount(articleDO.getId()));
+        vo.setCollectCount(getArticleCollectCount(articleDO.getId()));
+        vo.setCommentCount(getArticleCommentCount(articleDO.getId()));
+        vo.setViewCount(viewCountService.getViewCount(articleDO.getId()));
+        
+        // Get article tags (placeholder for now)
+        vo.setTags(getArticleTags(articleDO.getId()));
+        
+        return vo;
     }
 
     @Override
@@ -465,21 +482,70 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Override
     public boolean deleteArticleById(Long articleId) {
-        log.info("管理员删除文章: {}", articleId);
-        try {
-            // 获取文章
-            ArticleDO article = articleMapper.selectById(articleId);
-            if (article == null) {
-                log.warn("要删除的文章不存在: {}", articleId);
-                return false;
-            }
-            
-            // 删除文章
-            return articleMapper.deleteById(articleId) > 0;
-        } catch (Exception e) {
-            log.error("删除文章失败: {}", articleId, e);
+        ArticleDO article = articleMapper.selectById(articleId);
+        if (article == null) {
             return false;
         }
+        
+        // 软删除文章
+        article.setStatus(2); // 设置为删除状态
+        int result = articleMapper.updateById(article);
+        
+        // 从Elasticsearch中删除索引
+        if (result > 0) {
+            try {
+                searchService.deleteArticleIndex(articleId);
+            } catch (Exception e) {
+                log.error("删除文章索引失败: {}", e.getMessage(), e);
+                // 索引失败不影响主流程
+            }
+        }
+        
+        return result > 0;
+    }
+
+    @Override
+    @TraceLog("切换文章热门状态")
+    public boolean toggleArticleHotStatus(Long articleId, Boolean isHot) {
+        ArticleDO article = articleMapper.selectById(articleId);
+        if (article == null || article.getStatus() == 2) { // 文章不存在或已删除
+            return false;
+        }
+        
+        // 更新热门状态
+        article.setIsHot(isHot);
+        int result = articleMapper.updateById(article);
+        
+        // 如果是已发布状态，更新Elasticsearch索引
+        if (result > 0 && article.getStatus() == 1) {
+            try {
+                searchService.indexArticle(article);
+            } catch (Exception e) {
+                log.error("更新文章索引失败: {}", e.getMessage(), e);
+                // 索引失败不影响主流程
+            }
+        }
+        
+        return result > 0;
+    }
+
+    @Override
+    @TraceLog("获取热门文章列表")
+    public IPage<ArticleSummaryVO> getHotArticles(int pageNum, int pageSize) {
+        Page<ArticleDO> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<ArticleDO> wrapper = new LambdaQueryWrapper<>();
+        
+        // 只获取热门且已发布的文章
+        wrapper.eq(ArticleDO::getIsHot, true)
+               .eq(ArticleDO::getStatus, 1); // 发布状态
+        
+        // 按创建时间降序排序
+        wrapper.orderByDesc(ArticleDO::getCreatedAt);
+        
+        IPage<ArticleDO> articlePage = articleMapper.selectPage(page, wrapper);
+        
+        // 转换为VO对象
+        return articlePage.convert(this::convertToSummaryVO);
     }
 
 }

@@ -7,12 +7,16 @@ import org.jeffrey.api.dto.article.ArticleUpdateDTO;
 import org.jeffrey.api.vo.Article.ArticleSummaryVO;
 import org.jeffrey.api.vo.Article.ArticleVO;
 import org.jeffrey.api.vo.ResVo;
+import org.jeffrey.api.vo.StatusEnum;
 import org.jeffrey.core.trace.TraceLog;
 import org.jeffrey.service.ai.service.AIService;
 import org.jeffrey.service.article.service.ArticleService;
+import org.jeffrey.service.file.FileService;
 import org.jeffrey.service.security.CustomUserDetails;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/articles")
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class ArticleRestController {
     private final ArticleService articleService;
     private final AIService aiService;
+    private final FileService fileService;
 
     @PostMapping
 //    @PreAuthorize("isAuthenticated()") // Ensure user is logged in
@@ -30,6 +35,26 @@ public class ArticleRestController {
         createDTO.setSummary(aiService.getArticleSummary(createDTO.getContent()));
         ArticleVO createdArticle = articleService.createArticle(createDTO, authorId);
         return ResVo.ok(createdArticle);
+    }
+
+    @PostMapping("/image")
+    @PreAuthorize("isAuthenticated()")
+    @TraceLog("上传文章图片")
+    public ResVo<String> uploadArticleImage(@RequestParam("image") MultipartFile image,
+                                          @AuthenticationPrincipal CustomUserDetails currentUser) {
+        if (image.isEmpty()) {
+            return ResVo.fail(StatusEnum.ILLEGAL_ARGUMENTS_MIXED, "图片文件为空");
+        }
+        
+        try {
+            // 使用FileService上传图片
+            String[] allowedTypes = {"image/jpeg", "image/png", "image/gif"};
+            long maxSize = 5 * 1024 * 1024; // 5MB
+            String imageUrl = fileService.uploadFile(image, "articles", allowedTypes, maxSize);
+            return ResVo.ok(imageUrl);
+        } catch (Exception e) {
+            return ResVo.fail(StatusEnum.UNEXPECT_ERROR, "上传图片失败: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
@@ -71,6 +96,16 @@ public class ArticleRestController {
             @RequestParam(required = false) Integer status // Optional filter by status (e.g., for drafts)
     ) {
         IPage<ArticleSummaryVO> page = articleService.listArticles(pageNum, pageSize, authorId, status);
+        return ResVo.ok(page);
+    }
+
+    @GetMapping("/hot")
+    @TraceLog("获取热门文章API")
+    public ResVo<IPage<ArticleSummaryVO>> getHotArticles(
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "10") int pageSize
+    ) {
+        IPage<ArticleSummaryVO> page = articleService.getHotArticles(pageNum, pageSize);
         return ResVo.ok(page);
     }
 

@@ -25,7 +25,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AIChatController {
 
-    private final AIService aiService;
+    private final AIService  aiService;
 
     /**
      * Simple endpoint to chat with the AI using just a prompt string.

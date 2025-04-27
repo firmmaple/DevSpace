@@ -150,6 +150,18 @@
                                 </select>
                             </div>
 
+                            <!-- Image Input -->
+                            <div class="mb-3">
+                                <label for="article-image-input" class="form-label">Article Image</label>
+                                <input type="file" class="form-control" id="article-image-input" accept="image/jpeg,image/png,image/gif">
+                                <button type="button" class="btn btn-primary mt-2" id="upload-image-btn">Upload</button>
+                                <div id="image-preview-container" class="d-none mt-2">
+                                    <img id="article-image-preview" class="img-thumbnail" alt="Article Image Preview">
+                                    <button type="button" class="btn btn-danger mt-2" id="remove-image-btn">Remove Image</button>
+                                </div>
+                                <input type="hidden" id="article-image-url">
+                            </div>
+
                             <!-- Buttons - Pushed to bottom by mt-auto in flex form -->
                             <div class="d-flex justify-content-between mt-auto pt-3">
                                 <button type="button" class="btn btn-secondary" id="cancel-button">Cancel</button>
@@ -203,19 +215,28 @@
                 const cancelButton = document.getElementById('cancel-button');
                 const submitText = document.getElementById('submit-text');
                 const contentFeedback = document.getElementById('content-feedback');
+                const imageInput = document.getElementById('article-image-input');
+                const uploadImageBtn = document.getElementById('upload-image-btn');
+                const imagePreviewContainer = document.getElementById('image-preview-container');
+                const imagePreview = document.getElementById('article-image-preview');
+                const removeImageBtn = document.getElementById('remove-image-btn');
+                const imageUrlInput = document.getElementById('article-image-url');
 
                 // --- Mode Detection ---
                 const editId = articleIdInput.value || null;
                 const isEditMode = !!editId;
                 console.log(`Editor mode: ${isEditMode ? 'Edit (ID: ' + editId + ')' : 'Create'}`);
 
+                textarea.style.height = 'auto'; // 重新调整高度
+                textarea.style.height = textarea.scrollHeight + 'px'; 
+                
                 let initialArticleData = {}; // For change detection
 
                 // --- Load or Init ---
                 if (isEditMode) { loadArticle(editId); }
                 else {
                     updatePreview(); // Init preview
-                    initialArticleData = { title: '', content: '', tagsString: '', status: statusSelect.value };
+                    initialArticleData = { title: '', content: '', tagsString: '', status: statusSelect.value, imageUrl: '' };
                 }
 
                 // --- Configure marked.js ---
@@ -231,8 +252,21 @@
                 // --- Form Submission ---
                 articleForm.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    if (!validateForm()) { showError("Please correct the errors."); const firstInvalid = articleForm.querySelector('.is-invalid'); if(firstInvalid) firstInvalid.focus(); return; }
-                    const articleData = { title: titleInput.value.trim(), content: markdownInput.value, status: parseInt(statusSelect.value, 10), tags: tagsInput.value.trim() ? tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag) : [] };
+                    if (!validateForm()) {
+                        showError("Please correct the errors.");
+                        const firstInvalid = articleForm.querySelector('.is-invalid');
+                        if(firstInvalid) firstInvalid.focus();
+                        return;
+                    }
+
+                    const articleData = {
+                        title: titleInput.value.trim(),
+                        content: markdownInput.value,
+                        status: parseInt(statusSelect.value, 10),
+                        tags: tagsInput.value.trim() ? tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+                        imageUrl: imageUrlInput.value // 添加图片URL
+                    };
+
                     const url = isEditMode ? `/api/articles/${editId}` : '/api/articles';
                     const method = isEditMode ? 'PUT' : 'POST';
                     saveArticle(url, method, articleData, isEditMode, editId);
@@ -240,7 +274,13 @@
 
                 // --- Cancel Button ---
                 cancelButton.addEventListener('click', function() {
-                    const currentData = { title: titleInput.value, content: markdownInput.value, tagsString: tagsInput.value, status: statusSelect.value };
+                    const currentData = {
+                        title: titleInput.value,
+                        content: markdownInput.value,
+                        tagsString: tagsInput.value,
+                        status: statusSelect.value,
+                        imageUrl: imageUrlInput.value
+                    };
                     if (JSON.stringify(currentData) !== JSON.stringify(initialArticleData)) {
                         const discardModal = new bootstrap.Modal(document.getElementById('discardModal'));
                         discardModal.show();
@@ -259,62 +299,182 @@
                                 markdownInput.value = article.rawContent || article.content || '';
                                 tagsInput.value = (article.tags && article.tags.length > 0) ? article.tags.map(t => typeof t === 'object' ? t.name : t).join(', ') : '';
                                 statusSelect.value = String(article.status !== undefined ? article.status : 1);
+
+                                // 处理文章图片
+                                if (article.imageUrl) {
+                                    imageUrlInput.value = article.imageUrl;
+                                    imagePreview.src = article.imageUrl;
+                                    imagePreviewContainer.classList.remove('d-none');
+                                } else {
+                                    imageUrlInput.value = '';
+                                    imagePreviewContainer.classList.add('d-none');
+                                }
+
                                 updatePreview();
-                                initialArticleData = { title: titleInput.value, content: markdownInput.value, tagsString: tagsInput.value, status: statusSelect.value };
-                            } else { console.error("Error loading article data:", data); showError(data.status.msg || 'Failed to load article.'); articleForm.querySelectorAll('input, textarea, select, button[type="submit"]').forEach(el => el.disabled = true); }
+                                initialArticleData = {
+                                    title: titleInput.value,
+                                    content: markdownInput.value,
+                                    tagsString: tagsInput.value,
+                                    status: statusSelect.value,
+                                    imageUrl: imageUrlInput.value
+                                };
+                            } else {
+                                console.error("Error loading article data:", data);
+                                showError(data.status.msg || 'Failed to load article.');
+                                articleForm.querySelectorAll('input, textarea, select, button[type="submit"]').forEach(el => el.disabled = true);
+                            }
                         })
-                        .catch(error => { console.error('Network error loading article:', error); showError('Error loading article: ' + (error.message || 'Network Error')); articleForm.querySelectorAll('input, textarea, select, button[type="submit"]').forEach(el => el.disabled = true); });
+                        .catch(error => {
+                            console.error('Network error loading article:', error);
+                            showError('Error loading article: ' + (error.message || 'Network Error'));
+                            articleForm.querySelectorAll('input, textarea, select, button[type="submit"]').forEach(el => el.disabled = true);
+                        });
                 }
 
                 // --- Save Article ---
-                function saveArticle(url, method, articleData, isEditing, currentId) {
-                    const submitButton = articleForm.querySelector('button[type="submit"]');
-                    const originalButtonHtml = submitButton.innerHTML;
-                    submitButton.disabled = true;
-                    submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...`;
-                    clearErrors();
-                    console.log(`Sending ${method} to ${url}`);
-                    AuthUtils.authenticatedFetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(articleData) })
-                        .then(data => {
-                            if (data.status.code === 0) {
-                                const savedArticleId = isEditing ? currentId : (data.result ? data.result.id : null);
-                                if (savedArticleId) { window.location.href = `/articles/${savedArticleId}`; }
-                                else { console.error("No ID returned."); showError("Saved, but couldn't get ID. Redirecting..."); setTimeout(() => { window.location.href = '/articles'; }, 2500); }
-                            } else { let errorMsg = data.status.msg || 'Error saving.'; if (data.errors) { errorMsg += "<ul>"; for (const field in data.errors) { errorMsg += `<li>${field}: ${data.errors[field]}</li>`; } errorMsg += "</ul>"; } showError(errorMsg); }
+                function saveArticle(url, method, data, isEdit, id) {
+                    const submitBtn = articleForm.querySelector('button[type="submit"]');
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${isEdit ? 'Updating...' : 'Saving...'}`;
+
+                    AuthUtils.authenticatedFetch(url, {
+                        method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                        .then(response => {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = `<i class="fas fa-save me-1"></i> ${isEdit ? 'Update Article' : 'Save Article'}`;
+
+                            if (response.status.code === 0) {
+                                const savedArticleId = isEdit ? id : response.result.id;
+                                window.location.href = `/articles/${savedArticleId}`;
+                            } else {
+                                showError(`Failed to ${isEdit ? 'update' : 'save'} article: ${response.status.msg}`);
+                            }
                         })
-                        .catch(error => { console.error('Network error saving:', error); showError('Error saving: ' + (error.message || 'Network/Server Error')); })
-                        .finally(() => { submitButton.disabled = false; submitButton.innerHTML = originalButtonHtml; });
+                        .catch(error => {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = `<i class="fas fa-save me-1"></i> ${isEdit ? 'Update Article' : 'Save Article'}`;
+                            showError(`Error ${isEdit ? 'updating' : 'saving'} article: ${error.message || 'Unknown error'}`);
+                        });
                 }
 
-                // --- Validation ---
+                // --- Form Validation ---
                 function validateForm() {
-                    let isValid = true; clearErrors();
-                    if (!titleInput.value.trim()) { titleInput.classList.add('is-invalid'); isValid = false; } else { titleInput.classList.add('is-valid'); }
-                    const contentText = markdownInput.value.trim();
-                    if (!contentText || contentText.length < 10) { markdownInput.classList.add('is-invalid', 'is-invalid-editor'); contentFeedback.style.display = 'block'; isValid = false; } else { markdownInput.classList.add('is-valid'); contentFeedback.style.display = 'none'; }
+                    let isValid = true;
+
+                    // Title validation
+                    if (!titleInput.value.trim()) {
+                        titleInput.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        titleInput.classList.remove('is-invalid');
+                    }
+
+                    // Content validation
+                    if (!markdownInput.value.trim() || markdownInput.value.trim().length < 10) {
+                        markdownInput.classList.add('is-invalid-editor');
+                        contentFeedback.innerText = markdownInput.value.trim() ? 'Content is too short (minimum 10 characters).' : 'Please enter content for your article.';
+                        isValid = false;
+                    } else {
+                        markdownInput.classList.remove('is-invalid-editor');
+                    }
+
                     return isValid;
                 }
 
-                // --- Error Handling ---
+                // --- Error Display ---
                 function showError(message) {
-                    clearErrors();
-                    const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-danger alert-dismissible fade show mb-4';
-                    alertDiv.setAttribute('role', 'alert');
-                    alertDiv.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-exclamation-triangle flex-shrink-0 me-2"></i><div>${DOMPurify.sanitize(message, { USE_PROFILES: { html: true } })}</div></div><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
-                    articleForm.prepend(alertDiv);
-                    alertDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-                function clearErrors() {
-                    const existingAlert = articleForm.querySelector('.alert-danger');
-                    if (existingAlert) existingAlert.remove();
-                    articleForm.querySelectorAll('.is-invalid, .is-valid').forEach(el => { el.classList.remove('is-invalid', 'is-valid'); });
-                    markdownInput.classList.remove('is-invalid-editor');
-                    contentFeedback.style.display = 'none';
+                    const errorAlert = document.createElement('div');
+                    errorAlert.className = 'alert alert-danger alert-dismissible fade show mt-3';
+                    errorAlert.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+                    articleForm.insertAdjacentElement('afterbegin', errorAlert);
+
+                    // Auto-remove after 5 seconds
+                    setTimeout(() => {
+                        errorAlert.classList.remove('show');
+                        setTimeout(() => errorAlert.remove(), 150);
+                    }, 5000);
                 }
 
+                // 图片上传事件处理
+                if (uploadImageBtn) {
+                    uploadImageBtn.addEventListener('click', function() {
+                        if (imageInput.files.length > 0) {
+                            const imageFile = imageInput.files[0];
+
+                            // 验证文件类型
+                            if (!imageFile.type.match('image/(jpeg|png|gif)')) {
+                                showError('Only JPG, PNG and GIF images are allowed');
+                                return;
+                            }
+
+                            // 验证文件大小
+                            if (imageFile.size > 5 * 1024 * 1024) {
+                                showError('Image size must be less than 5MB');
+                                return;
+                            }
+
+                            // 禁用上传按钮，显示加载状态
+                            uploadImageBtn.disabled = true;
+                            uploadImageBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
+
+                            // 构建FormData
+                            const formData = new FormData();
+                            formData.append('image', imageFile);
+
+                            // 发送上传请求
+                            AuthUtils.authenticatedFetch('/api/articles/image', {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => {
+                                // 恢复按钮状态
+                                uploadImageBtn.disabled = false;
+                                uploadImageBtn.innerHTML = 'Upload';
+
+                                if (response.status.code === 0) {
+                                    // 上传成功，显示预览图
+                                    const imageUrl = response.result;
+                                    imageUrlInput.value = imageUrl;
+                                    imagePreview.src = imageUrl;
+                                    imagePreviewContainer.classList.remove('d-none');
+                                } else {
+                                    // 上传失败
+                                    showError('Failed to upload image: ' + response.status.msg);
+                                }
+                            })
+                            .catch(error => {
+                                // 恢复按钮状态
+                                uploadImageBtn.disabled = false;
+                                uploadImageBtn.innerHTML = 'Upload';
+                                showError('Failed to upload image: ' + error.message);
+                            });
+                        } else {
+                            showError('Please select an image file first');
+                        }
+                    });
+                }
+
+                // 移除图片按钮处理
+                if (removeImageBtn) {
+                    removeImageBtn.addEventListener('click', function() {
+                        imageUrlInput.value = '';
+                        imagePreviewContainer.classList.add('d-none');
+                        imageInput.value = null; // 清空文件输入框
+                    });
+                }
             }); // End DOMContentLoaded
             /*]]>*/
+            const textarea = document.getElementById('markdown-input');
+
+            textarea.addEventListener('input', function () {
+                this.style.height = 'auto';        // 先将高度重置为auto，重新计算
+                this.style.height = this.scrollHeight + 'px'; // 设置成内容的高度
+            });
         </script>
     </th:block>
 

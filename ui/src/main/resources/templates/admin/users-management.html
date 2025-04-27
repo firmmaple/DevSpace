@@ -42,8 +42,13 @@
                                 <td th:text="${user.id}">1</td>
                                 <td th:text="${user.username}">username</td>
                                 <td>
-                                    <span th:if="${user.isAdmin}" class="badge bg-success">是</span>
-                                    <span th:unless="${user.isAdmin}" class="badge bg-secondary">否</span>
+                                    <button type="button" class="btn btn-sm toggle-admin-btn"
+                                            th:classappend="${user.isAdmin} ? 'btn-success' : 'btn-secondary'"
+                                            th:data-userid="${user.id}" 
+                                            th:data-username="${user.username}"
+                                            th:data-isadmin="${user.isAdmin}">
+                                        <span th:text="${user.isAdmin} ? '是' : '否'">否</span>
+                                    </button>
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
@@ -94,8 +99,47 @@
                         }
                     });
                 });
+                
+                // 为所有切换管理员权限按钮添加点击事件
+                document.querySelectorAll('.toggle-admin-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const userId = this.getAttribute('data-userid');
+                        const username = this.getAttribute('data-username');
+                        const isAdmin = this.getAttribute('data-isadmin') === 'true';
+                        const newAdminStatus = !isAdmin;
+                        const actionText = newAdminStatus ? '设为管理员' : '取消管理员权限';
+                        
+                        if (confirm(`确定要将用户 "${username}"(ID: ${userId}) ${actionText}吗？`)) {
+                            // 发送切换管理员权限请求
+                            AuthUtils.authenticatedFetch(`/api/admin/users/${userId}/admin?isAdmin=${newAdminStatus}`, {
+                                method: 'PUT'
+                            })
+                            .then(response => {
+                                if (response.status.code === 0) {
+                                    alert(`用户权限更新成功！`);
+                                    // 更新按钮样式和文本
+                                    if (newAdminStatus) {
+                                        this.classList.remove('btn-secondary');
+                                        this.classList.add('btn-success');
+                                        this.querySelector('span').textContent = '是';
+                                    } else {
+                                        this.classList.remove('btn-success');
+                                        this.classList.add('btn-secondary');
+                                        this.querySelector('span').textContent = '否';
+                                    }
+                                    this.setAttribute('data-isadmin', newAdminStatus);
+                                } else {
+                                    alert('更新权限失败: ' + response.status.msg);
+                                }
+                            })
+                            .catch(error => {
+                                alert('更新权限请求失败: ' + error.message);
+                            });
+                        }
+                    });
+                });
             });
         </script>
     </th:block>
 </body>
-</html> 
+</html>

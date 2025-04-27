@@ -328,12 +328,17 @@ function loadArticleDetails() {
     const articleNotFound = document.getElementById('article-not-found');
     const authorActions = document.getElementById('author-actions');
     
-    // Early return if essential elements don't exist
-    if (!articleContainer || !articleLoading) return;
+    // 确保文章容器默认是隐藏的
+    if (articleContainer) {
+        articleContainer.classList.add('d-none');
+    }
     
-    // Show loading
-    articleLoading.classList.remove('d-none');
-    articleContainer.classList.add('d-none');
+    // 显示加载指示器
+    if (articleLoading) {
+        articleLoading.classList.remove('d-none');
+    }
+    
+    // 隐藏错误信息
     if (articleNotFound) {
         articleNotFound.classList.add('d-none');
     }
@@ -358,6 +363,18 @@ function loadArticleDetails() {
                 const viewsElement = document.getElementById('article-views');
                 const likesElement = document.getElementById('article-likes');
                 const collectsElement = document.getElementById('article-collects');
+                
+                // 处理文章封面图片
+                const imageContainer = document.getElementById('article-image-container');
+                const imageElement = document.getElementById('article-image');
+                if (imageContainer && imageElement) {
+                    if (article.imageUrl) {
+                        imageElement.src = article.imageUrl;
+                        imageContainer.classList.remove('d-none');
+                    } else {
+                        imageContainer.classList.add('d-none');
+                    }
+                }
                 
                 // 直接设置HTML内容，不需要转换
                 if (titleElement) titleElement.textContent = article.title || 'Untitled';
@@ -415,7 +432,7 @@ function loadArticleDetails() {
                     }
                     
                     if (authorCardProfileElement) {
-                        authorCardProfileElement.href = `/profile/${article.authorId}`;
+                        authorCardProfileElement.href = `/users/${article.authorId}`;
                     }
                 }
                 

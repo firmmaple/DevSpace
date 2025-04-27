@@ -291,6 +291,17 @@ const ArticleListController = (function() {
         // 高亮关键词
         highlightKeyword(summaryElement, summary, state.keyword);
         
+        // 设置文章图片（如果有）
+        const imageElement = articleClone.querySelector('.article-image');
+        if (imageElement) {
+            if (article.imageUrl) {
+                imageElement.src = article.imageUrl;
+                imageElement.classList.remove('d-none');
+            } else {
+                imageElement.classList.add('d-none');
+            }
+        }
+        
         // 设置其他信息
         articleClone.querySelector('.article-author').textContent = article.authorUsername || 'Anonymous';
         articleClone.querySelector('.article-date').textContent = formatDate(article.createdAt);
