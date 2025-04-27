@@ -41,9 +41,6 @@
                         <a href="#security" class="list-group-item list-group-item-action" data-bs-toggle="list">
                             <i class="fas fa-lock me-2"></i> Security
                         </a>
-                        <a href="#projects" class="list-group-item list-group-item-action" data-bs-toggle="list">
-                            <i class="fas fa-code me-2"></i> Projects
-                        </a>
                         <a href="#settings" class="list-group-item list-group-item-action" data-bs-toggle="list">
                             <i class="fas fa-cog me-2"></i> Settings
                         </a>
@@ -145,7 +142,13 @@
                     <div class="tab-pane fade" id="my-articles">
                         <div class="card border-0 shadow-sm">
                             <div class="card-header bg-white">
-                                <h5 class="mb-0">My Articles</h5>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">My Articles</h5>
+                                    <div class="btn-group" role="group" aria-label="Article status filter">
+                                        <button type="button" class="btn btn-sm btn-outline-primary active" id="published-articles-btn" data-status="1">Published</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="draft-articles-btn" data-status="0">Drafts</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="card-body p-4">
                                 <div id="my-articles-container">
@@ -250,23 +253,6 @@
                         </div>
                     </div>
                     
-                    <!-- Projects Tab -->
-                    <div class="tab-pane fade" id="projects">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header bg-white">
-                                <h5 class="mb-0">My Projects</h5>
-                            </div>
-                            <div class="card-body p-4">
-                                <div class="d-flex align-items-center justify-content-center py-5">
-                                    <div class="text-center">
-                                        <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
-                                        <p class="mb-2">No projects created yet.</p>
-                                        <a href="#" class="btn btn-primary">Create New Project</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     
                     <!-- Settings Tab -->
                     <div class="tab-pane fade" id="settings">

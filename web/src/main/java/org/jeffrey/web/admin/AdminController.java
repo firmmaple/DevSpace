@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.jeffrey.api.vo.ResVo;
 import org.jeffrey.api.vo.StatusEnum;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
@@ -99,5 +100,23 @@ public class AdminController {
             log.error("同步文章到Elasticsearch失败", e);
             return ResVo.fail(StatusEnum.UNEXPECT_ERROR, e.getMessage());
         }
+    }
+
+    @GetMapping("/users/{userId}")
+    public String viewUserDetail(@PathVariable Long userId, Model model) {
+        UserDO user = userService.getById(userId);
+        if (user == null) {
+            return "redirect:/admin/users";
+        }
+        
+        model.addAttribute("user", user);
+        
+        // Set page properties
+        model.addAttribute("title", "DevSpace Admin - User Detail");
+        model.addAttribute("currentPage", "admin");
+        model.addAttribute("adminSection", "users");
+        model.addAttribute("viewName", "admin/user-detail");
+        
+        return "layout/main";
     }
 } 

@@ -47,8 +47,8 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
-                                        <a href="#" class="btn btn-outline-primary">查看</a>
-                                        <button type="button" class="btn btn-outline-danger">删除</button>
+                                        <a th:href="@{/admin/users/{id}(id=${user.id})}" class="btn btn-outline-primary">查看</a>
+                                        <button type="button" class="btn btn-outline-danger delete-user-btn" th:data-userid="${user.id}" th:data-username="${user.username}">删除</button>
                                     </div>
                                 </td>
                             </tr>
@@ -67,6 +67,33 @@
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 console.log("Admin users page loaded");
+                
+                // 为所有删除按钮添加点击事件
+                document.querySelectorAll('.delete-user-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const userId = this.getAttribute('data-userid');
+                        const username = this.getAttribute('data-username');
+                        
+                        if (confirm(`确定要删除用户 "${username}"(ID: ${userId}) 吗？此操作无法撤销。`)) {
+                            // 发送删除请求
+                            AuthUtils.authenticatedFetch(`/api/admin/users/${userId}`, {
+                                method: 'DELETE'
+                            })
+                            .then(response => {
+                                if (response.status.code === 0) {
+                                    alert('用户删除成功！');
+                                    // 移除整行
+                                    this.closest('tr').remove();
+                                } else {
+                                    alert('删除失败: ' + response.status.msg);
+                                }
+                            })
+                            .catch(error => {
+                                alert('删除请求失败: ' + error.message);
+                            });
+                        }
+                    });
+                });
             });
         </script>
     </th:block>

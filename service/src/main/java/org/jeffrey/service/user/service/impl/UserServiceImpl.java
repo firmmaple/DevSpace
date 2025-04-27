@@ -1,6 +1,7 @@
 package org.jeffrey.service.user.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.jeffrey.api.dto.user.UserUpdateDTO;
 import org.jeffrey.api.vo.User.UserVO;
 import org.jeffrey.service.file.FileService;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements UserService {
     private final PasswordEncoder passwordEncoder;
@@ -189,5 +191,41 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
             save(newUser);
             return newUser;
         }
+    }
+    
+    @Override
+    public UserVO getUserDetailById(Long userId) {
+        UserDO user = getById(userId);
+        if (user == null) {
+            return null;
+        }
+        
+        return buildUserVO(user);
+    }
+    
+    @Override
+    public boolean deleteUserById(Long userId) {
+        log.info("管理员删除用户: {}", userId);
+        return removeById(userId);
+    }
+    
+    /**
+     * 构建UserVO对象
+     */
+    private UserVO buildUserVO(UserDO user) {
+        if (user == null) {
+            return null;
+        }
+        
+        UserVO vo = new UserVO();
+        vo.setId(user.getId());
+        vo.setUsername(user.getUsername());
+        vo.setAvatarUrl(user.getAvatarUrl());
+        vo.setEmail(user.getEmail());
+        vo.setBio(user.getBio());
+        vo.setIsAdmin(user.getIsAdmin());
+        // 注意：UserDO中没有创建和更新时间字段，实际应用中可能需要添加
+        
+        return vo;
     }
 }

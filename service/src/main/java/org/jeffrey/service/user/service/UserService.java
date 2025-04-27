@@ -49,4 +49,18 @@ public interface UserService extends IService<UserDO> {
      * @return the user
      */
     UserDO processOAuth2User(String username, String githubId, String email, String avatarUrl);
+    
+    /**
+     * 获取用户详情
+     * @param userId 用户ID
+     * @return 用户视图对象
+     */
+    UserVO getUserDetailById(Long userId);
+    
+    /**
+     * 管理员删除用户
+     * @param userId 用户ID
+     * @return 是否删除成功
+     */
+    boolean deleteUserById(Long userId);
 }

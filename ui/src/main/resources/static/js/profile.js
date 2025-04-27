@@ -61,6 +61,9 @@ document.addEventListener('DOMContentLoaded', function() {
             loadUserProfile();
         }
         
+        // 设置文章状态切换按钮事件
+        setupArticleStatusButtons();
+        
         // 处理URL hash进行标签切换
         const hash = window.location.hash;
         if (hash) {
@@ -83,12 +86,35 @@ document.addEventListener('DOMContentLoaded', function() {
             link.addEventListener('shown.bs.tab', function(event) {
                 const targetId = event.target.getAttribute('href');
                 if (targetId === '#my-articles') {
-                    loadMyArticles(1);
+                    // 获取当前选中的状态按钮
+                    const activeStatusBtn = document.querySelector('#published-articles-btn.active, #draft-articles-btn.active');
+                    const status = activeStatusBtn ? parseInt(activeStatusBtn.dataset.status) : 1;
+                    loadMyArticles(1, status);
                 } else if (targetId === '#my-collections') {
                     loadMyCollections(1);
                 }
             });
         });
+    }
+
+    /**
+     * 设置文章状态切换按钮
+     */
+    function setupArticleStatusButtons() {
+        const publishedBtn = document.getElementById('published-articles-btn');
+        const draftBtn = document.getElementById('draft-articles-btn');
+        
+        if (publishedBtn) {
+            publishedBtn.addEventListener('click', function() {
+                loadMyArticles(1, 1); // 加载已发布文章
+            });
+        }
+        
+        if (draftBtn) {
+            draftBtn.addEventListener('click', function() {
+                loadMyArticles(1, 0); // 加载草稿
+            });
+        }
     }
 
     /**
@@ -378,13 +404,28 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * 加载我的文章
      * @param {number} page - 页码
+     * @param {number} status - 文章状态: 1=已发布, 0=草稿
      */
-    function loadMyArticles(page) {
+    function loadMyArticles(page, status = 1) {
         const articlesContainer = document.getElementById('my-articles-container');
         const articlesLoading = document.getElementById('articles-loading');
         const articlesList = document.getElementById('articles-list');
         const noArticles = document.getElementById('no-articles');
         const pagination = document.getElementById('articles-pagination');
+        
+        // 更新按钮状态
+        const publishedBtn = document.getElementById('published-articles-btn');
+        const draftBtn = document.getElementById('draft-articles-btn');
+        
+        if (publishedBtn && draftBtn) {
+            if (status === 1) {
+                publishedBtn.classList.add('active');
+                draftBtn.classList.remove('active');
+            } else {
+                publishedBtn.classList.remove('active');
+                draftBtn.classList.add('active');
+            }
+        }
         
         if (!articlesContainer || !articlesLoading || !articlesList || !noArticles || !pagination) return;
         
@@ -398,7 +439,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!userId) return;
         
         // 构建API URL，获取当前用户的文章
-        const url = `/api/articles?pageNum=${page}&pageSize=5&authorId=${userId}`;
+        const url = `/api/articles?pageNum=${page}&pageSize=5&authorId=${userId}&status=${status}`;
         
         AuthUtils.authenticatedFetch(url)
             .then(response => {
@@ -414,15 +455,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // 渲染文章列表
                         articles.forEach(article => {
-                            const articleElement = createArticleElement(article);
+                            const articleElement = createArticleElement(article, status);
                             articlesList.appendChild(articleElement);
                         });
                         
                         // 更新分页
-                        updatePagination(response.result, pagination, loadMyArticles);
+                        updatePagination(response.result, pagination, (newPage) => loadMyArticles(newPage, status));
                     } else {
                         // 没有文章
                         noArticles.classList.remove('d-none');
+                        const message = status === 1 ? 
+                            'You have not published any articles yet.' : 
+                            'You have no draft articles.';
+                        noArticles.innerHTML = `
+                            <i class="fas fa-info-circle me-2"></i> ${message}
+                            <div class="mt-3">
+                                <a href="/articles/create" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-pen me-1"></i> Create New Article
+                                </a>
+                            </div>
+                        `;
                         pagination.innerHTML = '';
                     }
                 } else {
@@ -476,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // 渲染收藏列表
                         collections.forEach(article => {
-                            const articleElement = createArticleElement(article);
+                            const articleElement = createArticleElement(article, 1, true);
                             collectionsList.appendChild(articleElement);
                         });
                         
@@ -506,26 +558,77 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * 创建文章元素
      * @param {Object} article - 文章对象
+     * @param {number} status - 文章状态
+     * @param {boolean} isCollection - 是否为收藏的文章
      * @returns {HTMLElement} 文章DOM元素
      */
-    function createArticleElement(article) {
+    function createArticleElement(article, status, isCollection = false) {
         const articleCard = document.createElement('div');
         articleCard.className = 'card mb-3';
+        
+        // 根据文章状态添加边框样式 (对收藏的文章不添加特殊边框)
+        if (!isCollection) {
+            if (article.status === 0 || status === 0) {
+                articleCard.classList.add('border-warning'); // 草稿用黄色边框
+            } else {
+                articleCard.classList.add('border-success'); // 已发布用绿色边框
+            }
+        }
         
         const articleBody = document.createElement('div');
         articleBody.className = 'card-body';
         
-        // 文章标题
+        // 文章标题和操作区域
+        const headerRow = document.createElement('div');
+        headerRow.className = 'd-flex justify-content-between align-items-center mb-2';
+        
+        // 标题组（标题+标签）
+        const titleGroup = document.createElement('div');
+        titleGroup.className = 'd-flex align-items-center flex-grow-1';
+        
         const titleLink = document.createElement('a');
         titleLink.href = `/articles/${article.id}`;
         titleLink.className = 'text-decoration-none';
         
         const title = document.createElement('h5');
-        title.className = 'card-title';
+        title.className = 'card-title mb-0';
         title.textContent = article.title;
         
         titleLink.appendChild(title);
-        articleBody.appendChild(titleLink);
+        titleGroup.appendChild(titleLink);
+        
+        // 将标题组添加到头部行
+        headerRow.appendChild(titleGroup);
+        
+        // 状态标签 (收藏的文章不显示发布状态)
+        if (!isCollection) {
+            const statusBadge = document.createElement('span');
+            if (article.status === 0 || status === 0) {
+                statusBadge.className = 'badge bg-warning ms-2';
+                statusBadge.innerHTML = '<i class="fas fa-pencil-alt me-1"></i>Draft';
+            } else {
+                statusBadge.className = 'badge bg-success ms-2';
+                statusBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i>Published';
+            }
+            titleGroup.appendChild(statusBadge);
+        }
+        
+        // 操作按钮区域 (收藏的文章不显示编辑按钮)
+        if (!isCollection) {
+            const actionArea = document.createElement('div');
+            actionArea.className = 'ms-2';
+            
+            const editButton = document.createElement('a');
+            editButton.href = `/articles/edit/${article.id}`;
+            editButton.className = 'btn btn-sm btn-outline-primary';
+            editButton.innerHTML = '<i class="fas fa-edit me-1"></i>Edit';
+            editButton.title = 'Edit article';
+            
+            actionArea.appendChild(editButton);
+            headerRow.appendChild(actionArea);
+        }
+        
+        articleBody.appendChild(headerRow);
         
         // 文章摘要
         const summary = document.createElement('p');
@@ -535,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 文章信息（日期和统计）
         const infoRow = document.createElement('div');
-        infoRow.className = 'd-flex justify-content-between align-items-center';
+        infoRow.className = 'd-flex justify-content-between align-items-center mt-3';
         
         const date = document.createElement('small');
         date.className = 'text-muted';

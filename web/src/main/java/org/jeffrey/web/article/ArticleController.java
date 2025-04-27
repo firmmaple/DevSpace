@@ -1,7 +1,9 @@
 package org.jeffrey.web.article;
 
 import lombok.RequiredArgsConstructor;
+import org.jeffrey.api.vo.Article.ArticleVO;
 import org.jeffrey.core.trace.TraceLog;
+import org.jeffrey.service.article.service.ArticleService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
@@ -17,7 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/articles")
 @RequiredArgsConstructor
 public class ArticleController {
-    
+    private final ArticleService articleService;
+
     /**
      * Show article list page
      */
@@ -27,15 +30,15 @@ public class ArticleController {
         model.addAttribute("title", "Articles - DevSpace");
         model.addAttribute("currentPage", "articles");
         model.addAttribute("viewName", "articles/list");
-        
+
         // 如果有搜索关键词，传递给前端
         if (StringUtils.hasText(keyword)) {
             model.addAttribute("keyword", keyword);
         }
-        
+
         return "layout/main";
     }
-    
+
     /**
      * Show article detail page
      */
@@ -47,7 +50,7 @@ public class ArticleController {
         model.addAttribute("viewName", "articles/detail");
         return "layout/main";
     }
-    
+
     /**
      * Show article create page
      */
@@ -59,7 +62,7 @@ public class ArticleController {
         model.addAttribute("viewName", "articles/create");
         return "layout/main";
     }
-    
+
     /**
      * Show article edit page
      */
@@ -69,6 +72,9 @@ public class ArticleController {
         model.addAttribute("title", "Edit Article - DevSpace");
         model.addAttribute("currentPage", "articles");
         model.addAttribute("viewName", "articles/create"); // Reuse the create page for editing
+        ArticleVO article = articleService.getArticleById(id, null); // This should fetch the article details
+        model.addAttribute("article", article);
+
         return "layout/main";
     }
 } 

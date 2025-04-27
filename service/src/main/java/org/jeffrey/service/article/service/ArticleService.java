@@ -63,4 +63,11 @@ public interface ArticleService {
      * @return 分页结果
      */
     IPage<ArticleVO> getUserCollectedArticles(Long userId, int pageNum, int pageSize);
+    
+    /**
+     * 管理员删除文章（不检查作者权限）
+     * @param articleId 文章ID
+     * @return 是否删除成功
+     */
+    boolean deleteArticleById(Long articleId);
 }

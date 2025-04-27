@@ -253,9 +253,10 @@
                     AuthUtils.authenticatedFetch(`/api/articles/${id}`)
                         .then(data => {
                             if (data.status.code === 0 && data.result) {
+                                console.log("Article loaded:", data.result);
                                 const article = data.result;
                                 titleInput.value = article.title || '';
-                                markdownInput.value = article.content || '';
+                                markdownInput.value = article.rawContent || article.content || '';
                                 tagsInput.value = (article.tags && article.tags.length > 0) ? article.tags.map(t => typeof t === 'object' ? t.name : t).join(', ') : '';
                                 statusSelect.value = String(article.status !== undefined ? article.status : 1);
                                 updatePreview();

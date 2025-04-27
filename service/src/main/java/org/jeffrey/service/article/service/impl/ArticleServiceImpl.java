@@ -83,14 +83,19 @@ public class ArticleServiceImpl implements ArticleService {
             // Throw custom exception or return null/fail ResVo
             throw new ResourceNotFoundException("Article not found with ID: " + articleId);
         }
-        
-        // Increment view count for this article
-        Long viewCount = viewCountService.incrementViewCount(articleId);
-        
+
+        Long viewCount = 0L;
+        if(currentUserId!= null){
+            // Increment view count for this article
+            // 如果currentUserId为null，说明并不是用户访问， 可能是编辑文章
+            viewCount = viewCountService.incrementViewCount(articleId);
+        }
+
+        viewCount = viewCountService.getViewCount(articleId);
         ArticleVO articleVO = convertToVO(articleDO, currentUserId);
         // Set view count from Redis
         articleVO.setViewCount(viewCount);
-        
+
         return articleVO;
     }
 
@@ -107,7 +112,10 @@ public class ArticleServiceImpl implements ArticleService {
 //        }
         // Update fields from DTO
         existingArticle.setTitle(updateDTO.getTitle());
-        // ... update other fields ...
+        existingArticle.setSummary(updateDTO.getSummary());
+        existingArticle.setContent(updateDTO.getContent());
+        existingArticle.setStatus(updateDTO.getStatus());
+
         articleMapper.updateById(existingArticle);
         
         // 如果是已发布状态，则更新Elasticsearch索引
@@ -372,7 +380,7 @@ public class ArticleServiceImpl implements ArticleService {
         }
 
         vo.setTags(getArticleTags(articleDO.getId()));
-        
+
         return vo;
     }
 
@@ -452,6 +460,25 @@ public class ArticleServiceImpl implements ArticleService {
         } catch (Exception e) {
             log.error("获取用户收藏文章列表失败", e);
             return resultPage;
+        }
+    }
+
+    @Override
+    public boolean deleteArticleById(Long articleId) {
+        log.info("管理员删除文章: {}", articleId);
+        try {
+            // 获取文章
+            ArticleDO article = articleMapper.selectById(articleId);
+            if (article == null) {
+                log.warn("要删除的文章不存在: {}", articleId);
+                return false;
+            }
+            
+            // 删除文章
+            return articleMapper.deleteById(articleId) > 0;
+        } catch (Exception e) {
+            log.error("删除文章失败: {}", articleId, e);
+            return false;
         }
     }
 

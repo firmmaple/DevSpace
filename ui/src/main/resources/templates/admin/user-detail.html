@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div th:fragment="content" class="container">
+        <!-- Admin Content Header -->
+        <div class="row my-4">
+            <div class="col">
+                <h2>管理后台 - 用户详情</h2>
+                <div class="btn-group mt-3" role="group" aria-label="Admin Sections">
+                    <a th:href="@{/admin/users}" class="btn btn-primary">用户管理</a>
+                    <a th:href="@{/admin/articles}" class="btn btn-outline-primary">文章管理</a>
+                    <a th:href="@{/admin/elasticsearch}" class="btn btn-outline-primary">Elasticsearch管理</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Detail Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-transparent">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="mb-0">用户详情</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a th:href="@{/admin/users}" class="btn btn-sm btn-outline-secondary">返回</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center mb-4 mb-md-0">
+                        <img th:src="${user.avatarUrl != null ? user.avatarUrl : '/images/default-avatar.png'}" 
+                             alt="用户头像" class="img-fluid rounded-circle mb-3" style="max-width: 150px;">
+                        <div>
+                            <span th:if="${user.isAdmin}" class="badge bg-success">管理员</span>
+                            <span th:unless="${user.isAdmin}" class="badge bg-secondary">普通用户</span>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="table-responsive">
+                            <table class="table table-borderless">
+                                <tbody>
+                                    <tr>
+                                        <th style="width: 150px;">用户ID:</th>
+                                        <td th:text="${user.id}">1</td>
+                                    </tr>
+                                    <tr>
+                                        <th>用户名:</th>
+                                        <td th:text="${user.username}">username</td>
+                                    </tr>
+                                    <tr>
+                                        <th>邮箱:</th>
+                                        <td th:text="${user.email != null ? user.email : '未设置'}">email@example.com</td>
+                                    </tr>
+                                    <tr>
+                                        <th>个人简介:</th>
+                                        <td th:text="${user.bio != null ? user.bio : '未设置'}">用户简介</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="mt-4">
+                            <button type="button" class="btn btn-danger" id="deleteUserBtn" th:data-userid="${user.id}">
+                                删除用户
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Articles Section (could be added later) -->
+        
+    </div>
+    
+    <!-- JavaScript for this page -->
+    <th:block th:fragment="scripts">
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // 删除用户的点击事件
+                const deleteUserBtn = document.getElementById('deleteUserBtn');
+                if (deleteUserBtn) {
+                    deleteUserBtn.addEventListener('click', function() {
+                        if (confirm('确定要删除此用户吗？此操作无法撤销。')) {
+                            const userId = this.getAttribute('data-userid');
+                            
+                            // 发送删除请求
+                            AuthUtils.authenticatedFetch(`/api/admin/users/${userId}`, {
+                                method: 'DELETE'
+                            })
+                            .then(response => {
+                                if (response.status.code === 0) {
+                                    alert('用户删除成功！');
+                                    window.location.href = '/admin/users';
+                                } else {
+                                    alert('删除失败: ' + response.status.msg);
+                                }
+                            })
+                            .catch(error => {
+                                alert('删除请求失败: ' + error.message);
+                            });
+                        }
+                    });
+                }
+            });
+        </script>
+    </th:block>
+</body>
+</html> 

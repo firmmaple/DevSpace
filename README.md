@@ -193,6 +193,8 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
    - 摘要将自动生成（从内容提取），无需手动输入
    - 草稿保存功能
    - 表单验证
+   - 完善的编辑功能，可从文章详情页直接进入编辑页面
+   - 原始Markdown内容的保存与加载，确保编辑体验的连贯性
 
 4. **文章删除**
    - 作者可删除自己的文章
@@ -207,15 +209,16 @@ DevSpace 实现了完整的文章发布和管理系统，支持文章的创建�
    - Fetch API进行前后端数据交互
    - 使用 marked.js + DOMPurify 处理 Markdown 内容及预览
    - HTML/JavaScript 分离 (`article/detail.js` 用于详情页逻辑, `create.html` 内嵌脚本用于创建/编辑页)
+   - 统一的文章编辑界面，通过路由参数区分创建和编辑模式
 
 2. **后端实现**:
-   - `ArticleController` 处理页面路由
-   - `ArticleRestController` 提供RESTful API
+   - `ArticleController` 处理页面路由（包括创建和编辑页面）
+   - `ArticleRestController` 提供RESTful API（GET、POST、PUT、DELETE）
    - `ArticleService` 处理业务逻辑
    - JWT验证用户身份和权限
 
 3. **数据模型**:
-   - `ArticleVO` 视图对象展示文章详情
+   - `ArticleVO` 视图对象展示文章详情，包含 `content` (HTML) 和 `rawContent` (Markdown)
    - `ArticleSummaryVO` 视图对象展示文章摘要
    - `ArticleCreateDTO` 数据传输对象处理文章创建 (不含 `summary`)
    - `ArticleUpdateDTO` 数据传输对象处理文章更新 (不含 `summary`)

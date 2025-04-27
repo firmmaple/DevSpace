@@ -28,6 +28,8 @@
                                     <div id="author-name" class="fw-bold">Author Name</div>
                                     <div class="text-muted small">
                                         <span><i class="fas fa-calendar me-1"></i> <span id="article-date">Jan 1, 2023</span></span>
+                                        <span id="author-indicator" class="badge bg-info ms-2 d-none">Your Article</span>
+                                        <span id="admin-indicator" class="badge bg-danger ms-2 d-none">Admin Mode</span>
                                     </div>
                                 </div>
                             </div>
@@ -69,10 +71,10 @@
                                 
                                 <!-- Author Actions -->
                                 <div id="author-actions" class="d-none">
-                                    <a id="edit-button" href="#" class="btn btn-outline-primary me-2">
+                                    <a id="edit-button" href="#" class="btn btn-outline-primary me-2" title="Edit this article" aria-label="Edit article">
                                         <i class="fas fa-edit me-1"></i> Edit
                                     </a>
-                                    <button id="delete-button" class="btn btn-outline-danger">
+                                    <button id="delete-button" class="btn btn-outline-danger" title="Delete this article" aria-label="Delete article">
                                         <i class="fas fa-trash-alt me-1"></i> Delete
                                     </button>
                                 </div>
@@ -220,6 +222,25 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-danger" id="confirm-delete">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Confirmation Modal -->
+        <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalLabel">Edit Article</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>You're about to edit this article. Any unsaved changes on this page will be lost.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="confirm-edit">Continue to Edit</button>
                     </div>
                 </div>
             </div>

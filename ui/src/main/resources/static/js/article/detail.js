@@ -37,6 +37,7 @@ function initPage() {
     
     // Set up buttons
     setupDeleteButton();
+    setupEditButton();
     setupInteractionButtons();
 }
 
@@ -66,6 +67,52 @@ function setupDeleteButton() {
                 }
             })
             .catch(error => console.error('Error deleting article:', error));
+        });
+    }
+}
+
+// Set up the edit button functionality
+function setupEditButton() {
+    const editButton = document.getElementById('edit-button');
+    const confirmEditButton = document.getElementById('confirm-edit');
+    
+    if (editButton) {
+        editButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Check if user is authenticated
+            if (!AuthUtils.isAuthenticated()) {
+                window.location.href = '/login?redirect=' + encodeURIComponent(window.location.href);
+                return;
+            }
+            
+            // Show confirmation modal
+            const editModal = document.getElementById('editModal');
+            if (editModal) {
+                // Update modal text for admin vs author
+                const isAdmin = currentUser.roles && Array.isArray(currentUser.roles) && 
+                              currentUser.roles.includes('ROLE_ADMIN');
+                const modalTitle = document.getElementById('editModalLabel');
+                const modalBody = editModal.querySelector('.modal-body p');
+                
+                if (isAdmin && !isAuthor) {
+                    // Admin editing someone else's article
+                    if (modalTitle) modalTitle.textContent = 'Admin Edit Article';
+                    if (modalBody) modalBody.textContent = 'You are editing this article as an administrator. Please make sure your changes follow community guidelines.';
+                }
+                
+                new bootstrap.Modal(editModal).show();
+            } else {
+                // If modal doesn't exist for some reason, navigate directly
+                window.location.href = `/articles/edit/${articleId}`;
+            }
+        });
+    }
+    
+    if (confirmEditButton) {
+        confirmEditButton.addEventListener('click', function() {
+            // Navigate to edit page
+            window.location.href = `/articles/edit/${articleId}`;
         });
     }
 }
@@ -375,17 +422,38 @@ function loadArticleDetails() {
                 // Show article container
                 articleContainer.classList.remove('d-none');
                 
-                // Check if current user is the author
-                if (currentUser && currentUser.id && article.authorId) {
+                // Check if current user is the author or an admin
+                if (currentUser) {
+                    // Check if user is article author
                     isAuthor = currentUser.id == article.authorId;
                     
-                    if (isAuthor && authorActions) {
-                        authorActions.classList.remove('d-none');
+                    // Check if user is admin (has ROLE_ADMIN)
+                    const isAdmin = currentUser.roles && Array.isArray(currentUser.roles) && 
+                                    currentUser.roles.includes('ROLE_ADMIN');
                     
+                    // Show edit controls for authors or admins
+                    if ((isAuthor || isAdmin) && authorActions) {
+                        authorActions.classList.remove('d-none');
+                        
                         // Set edit button href
-                    const editButton = document.getElementById('edit-button');
-                    if (editButton) {
+                        const editButton = document.getElementById('edit-button');
+                        if (editButton) {
                             editButton.href = `/articles/edit/${article.id}`;
+                            console.log('Set edit button href to:', editButton.href);
+                        }
+                        
+                        // Show author indicator badge only for the actual author
+                        const authorIndicator = document.getElementById('author-indicator');
+                        if (authorIndicator && isAuthor) {
+                            authorIndicator.classList.remove('d-none');
+                        }
+                        
+                        // Change label for admin
+                        if (isAdmin && !isAuthor) {
+                            const adminIndicator = document.getElementById('admin-indicator');
+                            if (adminIndicator) {
+                                adminIndicator.classList.remove('d-none');
+                            }
                         }
                     }
                 }
