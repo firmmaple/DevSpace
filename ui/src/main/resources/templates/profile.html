@@ -283,7 +283,9 @@
     
     <!-- Custom scripts -->
     <th:block th:fragment="scripts">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="/js/profile.js"></script>
+        <script src="/js/profile-stats.js"></script>
         <!-- 添加一个用于处理页内标签切换的脚本 -->
         <script>
             // 页面加载时和hash变化时检查并切换到相应的标签页
@@ -306,6 +308,10 @@
                         } else if (hash === 'my-collections') {
                             if (typeof loadMyCollections === 'function') {
                                 loadMyCollections(1);
+                            }
+                        } else if (hash === 'activity-history') {
+                            if (typeof loadUserActivities === 'function') {
+                                loadUserActivities(1);
                             }
                         }
                     }

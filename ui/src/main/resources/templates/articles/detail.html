@@ -150,6 +150,72 @@
                     </div>
                 </div>
                 
+                <!-- Article Stats Card (for author or admin only) -->
+                <div id="article-stats-card" class="card mb-4 d-none">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i> Article Stats</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="stats-loading" class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading stats...</span>
+                            </div>
+                            <span class="ms-2">Loading stats...</span>
+                        </div>
+                        
+                        <div id="stats-content" class="d-none">
+                            <!-- Summary statistics -->
+                            <div class="row text-center mb-3">
+                                <div class="col-4">
+                                    <div class="h4 mb-0" id="stats-views">0</div>
+                                    <div class="small text-muted">Views</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="h4 mb-0" id="stats-likes">0</div>
+                                    <div class="small text-muted">Likes</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="h4 mb-0" id="stats-collects">0</div>
+                                    <div class="small text-muted">Collects</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Stats period selector -->
+                            <div class="d-flex justify-content-end mb-3">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary active" data-period="7">Week</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-period="30">Month</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-period="90">90 Days</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Stats chart -->
+                            <div>
+                                <canvas id="stats-chart" height="200"></canvas>
+                            </div>
+                            
+                            <!-- Weekly change indicators -->
+                            <div class="row mt-3 text-center">
+                                <div class="col-4">
+                                    <div id="views-change" class="small">
+                                        <i class="fas fa-arrow-up text-success"></i> 0%
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div id="likes-change" class="small">
+                                        <i class="fas fa-arrow-up text-success"></i> 0%
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div id="collects-change" class="small">
+                                        <i class="fas fa-arrow-up text-success"></i> 0%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Table of Contents -->
                 <div id="table-of-contents" class="card mb-4 d-none">
                     <div class="card-header">
@@ -256,6 +322,7 @@
     <th:block th:fragment="scripts">
         <script th:src="@{/js/article/detail.js}"></script>
         <script th:src="@{/js/article/toc.js}"></script>
+        <script th:src="@{/js/chart.js/chart.min.js}"></script>
     </th:block>
 </body>
 </html> 

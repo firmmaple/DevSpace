@@ -338,7 +338,7 @@ public class UserUpdateDTO implements Serializable {
     - `POST /auth/logout`: 用户登出
         - Response: `ResVo<String>`
         - **Side Effect**: Clears `jwt_token` and `user_info` Cookies.
-## 3.2 用户接口 (`/api/user`)
+## 3.2 用户接口 (`/api/user`, `/api/users`)
     - `GET /api/user/profile`: 获取当前登录用户资料
         - Response: `ResVo<UserVO>`
     - `POST /api/user/profile`: 更新当前登录用户资料
@@ -349,6 +349,9 @@ public class UserUpdateDTO implements Serializable {
         - Request Body: `multipart/form-data` with field `avatar` (File)
         - Response: `ResVo<String>` (返回新的头像 URL)
         - **Side Effect**: 更新用户数据库中的 `avatarUrl`。
+    - `GET /api/users/popular`: 获取热门作者列表
+        - Parameters: `limit` (int, optional, default: 5) - 获取作者数量
+        - Response: `ResVo<List<UserVO>>` (UserVO 中可能包含 articleCount)
 ## 3.3 文章接口 (`/api/articles`)
     - `GET /api/articles`: 获取文章列表 (分页)
         - Parameters:
@@ -432,6 +435,46 @@ public class UserUpdateDTO implements Serializable {
         - Request Body: JSON `{"content": "Article content here..."}`
         - Response: `ResVo<String>` (包含 AI 生成的摘要)
         - **Authentication**: Required (用户必须登录)
+## 3.7 活动与统计接口 (`/api/activities`, `/api/stats`)
+    - `GET /api/activities/user/{userId}`: 获取指定用户的最近活动记录 (分页)
+        - Parameters:
+            - `userId` (Long): 用户ID
+            - `pageNum` (long, optional, default: 1): 页码
+            - `pageSize` (long, optional, default: 10): 每页数量
+        - Response: `ResVo<IPage<UserActivityVO>>`
+    - `GET /api/activities/user/{userId}/type/{activityType}`: 获取指定用户特定类型的活动记录 (分页)
+        - Parameters:
+            - `userId` (Long): 用户ID
+            - `activityType` (String): 活动类型 (e.g., `CREATE_ARTICLE`, `LIKE_ARTICLE`)
+            - `pageNum` (long, optional, default: 1): 页码
+            - `pageSize` (long, optional, default: 10): 每页数量
+        - Response: `ResVo<IPage<UserActivityVO>>`
+    - `GET /api/activities/article/{articleId}`: 获取指定文章的相关活动记录 (分页)
+        - Parameters:
+            - `articleId` (Long): 文章ID
+            - `pageNum` (long, optional, default: 1): 页码
+            - `pageSize` (long, optional, default: 10): 每页数量
+        - Response: `ResVo<IPage<UserActivityVO>>`
+    - `GET /api/activities/my-activities`: 获取当前登录用户的活动记录 (分页)
+        - Parameters:
+            - `pageNum` (long, optional, default: 1): 页码
+            - `pageSize` (long, optional, default: 10): 每页数量
+            - `activityType` (String, optional): 按活动类型筛选
+        - Response: `ResVo<IPage<UserActivityVO>>`
+        - **Authentication**: Required
+    - `GET /api/stats/article/{articleId}`: 获取单篇文章的统计数据
+        - Parameters:
+            - `articleId` (Long): 文章ID
+            - `days` (int, optional): 查询天数 (e.g., 7, 30, 90)，默认为null或服务层默认值
+        - Response: `ResVo<ArticleStatsVO>` (包含总数和每日统计数据)
+    - `GET /api/stats/trending`: 获取热门文章列表 (基于统计数据)
+        - Parameters:
+            - `days` (int, optional): 统计天数
+            - `limit` (int, optional): 返回数量
+        - Response: `ResVo<List<Long>>` (文章ID列表)
+    - `POST /api/stats/sync`: 手动触发统计数据同步
+        - Response: `ResVo<String>`
+        - **Authentication**: Required (`ROLE_ADMIN`)
 
 # 4. 数据库设计
 
@@ -505,6 +548,28 @@ public class UserUpdateDTO implements Serializable {
     - `view_count` (BIGINT, default: 0) - 浏览量
     - `updated_at` (DATETIME) - 最后更新时间
     - *建议*: 添加 `INDEX(view_count DESC)` 支持按热度排序
+    - *注意*: 此表可能部分冗余，因为 `article_daily_stats` 提供了更详细的数据。
+
+- **用户活动表 (`user_activity`)**
+    - `id` (BIGINT, PK)
+    - `user_id` (BIGINT, FK) - 执行活动的用户ID
+    - `activity_type` (VARCHAR) - 活动类型 (e.g., 'CREATE_ARTICLE', 'LIKE_ARTICLE')
+    - `target_id` (BIGINT) - 活动目标ID (e.g., 文章ID, 评论ID)
+    - `target_type` (VARCHAR) - 活动目标类型 (e.g., 'ARTICLE', 'COMMENT')
+    - `content` (TEXT, nullable) - 活动相关内容 (e.g., 评论文本)
+    - `create_time` (DATETIME) - 活动发生时间
+
+- **文章每日统计表 (`article_daily_stats`)**
+    - `id` (BIGINT, PK)
+    - `article_id` (BIGINT, FK) - 文章ID
+    - `stats_date` (DATE) - 统计日期
+    - `view_count` (INT, default: 0) - 当日浏览量
+    - `like_count` (INT, default: 0) - 当日点赞量
+    - `collect_count` (INT, default: 0) - 当日收藏量
+    - `comment_count` (INT, default: 0) - 当日评论量
+    - `create_time` (DATETIME) - 记录创建时间
+    - `update_time` (DATETIME) - 记录更新时间
+    - *建议*: 添加 `UNIQUE(article_id, stats_date)` 约束
 
 ### 后续计划
 
@@ -515,28 +580,44 @@ public class UserUpdateDTO implements Serializable {
 
 ## 5.1 概述
 
-用户资料管理模块允许用户查看、编辑自己的信息，并上传头像。
+用户资料管理模块允许用户查看、编辑自己的信息，并上传头像。现在还集成了活动历史和文章统计功能。
 
 ## 5.2 功能点
 
-- **查看资料 (`/profile`)**: 显示当前用户信息 (用户名、邮箱、简介、头像、加入时间)。
-- **编辑资料 (`POST /api/user/profile`)**: 允许修改用户名、邮箱、简介。
+- **查看资料 (`/profile`)**: 显示当前用户信息 (用户名、邮箱、简介、头像、加入时间)。页面包含多个标签页："我的文章", "我的收藏", "活动历史", "设置", "安全"。
+- **编辑资料 (`POST /api/user/profile`)**: 在 "设置" 标签页允许修改用户名、邮箱、简介。
 - **头像上传 (`POST /api/user/avatar`)**: 允许上传 JPG/PNG 格式，小于 2MB 的图片作为头像。
 - **实时更新**: 资料或头像更新后，前端 UI (包括 Header) 应实时反映变化。
+- **活动历史 (`Activity History` Tab)**:
+    - 通过 `/api/activities/user/{userId}` 获取活动列表。
+    - 活动列表项显示活动类型图标、描述性文本（如 "You created an article"）、目标文章链接、活动时间。
+    - 对评论活动，会尝试解析并显示评论内容。
+    - 提供下拉菜单，允许按 `ActivityTypeEnum` 进行筛选。
+    - 提供分页控件，通过 `/api/activities/...` 的 `pageNum` 参数加载更多活动。
+- **文章统计 (`Article Statistics` Section)**:
+    - **默认视图**: 显示 "All Your Articles" 的聚合统计。前端获取用户所有文章，然后对每篇文章调用 `/api/stats/article/{articleId}`，在客户端累加总浏览/点赞/收藏数，并合并每日统计数据用于图表。
+    - **文章选择**: 提供 `<select>` 下拉菜单，包含 "All Articles" 选项和用户所有已发布文章的列表。
+    - **单篇视图**: 选择特定文章后，调用 `/api/stats/article/{articleId}` 获取该文章的统计数据。
+    - **时间段选择**: 提供 7天、30天、90天按钮，点击后重新获取对应时间段的统计数据 (通过 `days` 参数调用 API)。
+    - **图表展示**: 使用 Chart.js 绘制折线图，展示所选时间段内、所选范围（全部或单篇）的每日浏览量、点赞量、收藏量。
+    - **UI元素**: 包含总数显示区域、文章选择下拉框、时间段按钮组、图表画布 (`<canvas>`)。
 
 ## 5.3 技术实现
 
-### 5.3.1 前端 (`profile.js`, `AuthUtils.js`)
+### 5.3.1 前端 (`profile.js`, `profile-stats.js`, `AuthUtils.js`)
 
-- **页面逻辑 (`profile.js`)**: 
-    - 通过 `AuthUtils.getUserInfo()` 获取当前用户数据填充页面。
-    - 调用 `/api/user/profile` (GET) 获取最新数据进行编辑。
-    - 提交表单时，调用 `/api/user/profile` (POST) 发送 `UserUpdateDTO`。
-    - 点击头像区域触发文件选择，使用 `FormData` 调用 `/api/user/avatar` (POST) 上传文件。
-    - 上传成功或编辑成功后，调用 `AuthUtils.updateUserInfo()` 更新 `user_info` Cookie。
-    - 触发 `userInfoUpdated` 自定义事件，通知其他组件（如 Header）更新。
+- **页面逻辑 (`profile.js`)**: 处理基本资料、设置、安全标签页的逻辑，包括资料获取、编辑表单提交、头像上传。
+- **活动与统计逻辑 (`profile-stats.js`)**: 
+    - 负责 "活动历史" 和 "文章统计" 标签页的初始化和交互。
+    - **活动历史**: 调用 `/api/activities/user/{userId}` 和 `/api/activities/user/{userId}/type/{type}` API，处理分页，渲染活动列表，处理筛选器变化。
+    - **文章统计**: 
+        - 调用 `/api/articles` 获取用户文章列表填充下拉菜单。
+        - 实现 `loadAllArticlesStats` 函数：获取文章列表，循环调用 `/api/stats/article/{id}`，客户端聚合数据。
+        - 实现 `loadArticleStats` 函数：调用 `/api/stats/article/{id}` 获取单篇数据。
+        - 实现 `createArticleStatsChart` 函数：使用 Chart.js 渲染统计图表。
+        - 处理下拉菜单和时间段按钮的事件。
 - **认证工具 (`AuthUtils.js`)**: 
-    - `updateUserInfo()` 方法用于更新 `user_info` Cookie 中的用户信息。
+    - 提供 `authenticatedFetch` 方法用于需要认证的 API 调用。
 
 ### 5.3.2 后端
 
@@ -697,7 +778,7 @@ commentElement.dataset.originalId = commentIdStr;
 ### 8.1.1 核心原则
 
 - **关注点分离**：HTML 文件 (`*.html`) 仅包含页面结构和 Thymeleaf 模板逻辑。JavaScript 文件 (`*.js`) 仅包含交互逻辑和 DOM 操作。
-- **模块化组织**：按功能领域划分 JavaScript 文件 (e.g., `auth.js`, `header.js`, `profile.js`, `article/detail.js`)。
+- **模块化组织**：按功能领域划分 JavaScript 文件 (e.g., `auth.js`, `header.js`, `profile.js`, `profile-stats.js`, `index.js`, `article/detail.js`)。
 - **统一引用方式**：通过 Thymeleaf 的 `th:src` 属性在 `scripts` 片段中引用页面特定的 JavaScript 文件。
 
 ### 8.1.2 文件组织结构
@@ -716,7 +797,9 @@ ui/src/main/resources/
     ├── js/                    # JavaScript 文件
     │   ├── auth.js            # 认证工具 (含 Cookie 操作)
     │   ├── header.js          # 头部交互 (导航栏、用户菜单、头像)
-    │   ├── profile.js         # 个人资料页脚本
+    │   ├── profile.js         # 个人资料页设置脚本
+    │   ├── profile-stats.js   # 个人资料页活动与统计脚本
+    │   ├── index.js           # 首页脚本
     │   └── article/           
     │       └── detail.js      # 文章详情页脚本 (含评论、点赞等)
     ├── css/                   # 样式文件
@@ -804,7 +887,7 @@ DevSpace 实现了一个动态生成的文章目录导航功能，用于提升�
 
 ## 9.1 概述
 
-为跟踪文章的受欢迎程度，系统实现了基于Redis缓存和MySQL持久化的浏览量统计功能。
+为跟踪文章的受欢迎程度，系统实现了基于Redis缓存和MySQL持久化的浏览量统计功能。**注意**: 此系统现在是更广泛的 **活动与统计系统** 的一部分，该系统使用 `article_daily_stats` 表记录更详细的每日统计数据 (浏览、点赞、收藏等)。
 
 ## 9.2 功能点
 
@@ -903,3 +986,54 @@ DevSpace 集成了一个 AI 聊天服务，允许登录用户通过 REST API 与
 - **API Key 安全**: Sambanova API Key 需要通过环境变量 `SAMBANOVA_API_KEY` 设置，不应硬编码或提交到版本控制。
 - **成本与限制**: 使用第三方 AI API 可能涉及成本和使用限制，需要注意监控。
 - **错误处理**: 服务实现和控制器包含对 API 调用失败和配置错误的健壮处理。控制器层捕获自定义运行时异常并返回适当的错误响应。
+
+# 11. 活动跟踪与统计系统设计 (New Section)
+
+## 11.1 概述
+
+DevSpace 实现了一个活动跟踪和文章统计系统，用于记录用户行为并提供数据分析功能，主要体现在用户个人资料页面。
+
+## 11.2 功能点
+
+- **活动跟踪**: 自动异步记录用户活动（创建/编辑/查看/点赞/收藏文章、评论）到数据库。
+- **活动历史展示**: 在个人资料页 (`/profile`) 的 "活动历史" 标签页显示用户活动流，支持类型筛选和分页。
+- **文章统计**: 在个人资料页的 "文章统计" 部分显示统计数据。
+    - **聚合视图**: 默认显示用户所有文章的总浏览/点赞/收藏数，以及基于每日数据的趋势图 (Chart.js)。
+    - **单篇视图**: 允许用户通过下拉菜单选择单篇文章，查看其详细统计数据和趋势图。
+    - **时间段**: 支持按 7/30/90 天筛选统计数据。
+
+## 11.3 技术实现
+
+### 11.3.1 后端 (`service/activity`, `web/activity`)
+
+- **事件驱动**: 使用 Spring 事件机制异步触发活动记录。
+- **数据存储**: 
+    - `user_activity` 表存储活动流水。
+    - `article_daily_stats` 表存储每日统计汇总数据。
+- **服务层**: `UserActivityService` 处理活动记录查询；`ArticleStatsService` 处理统计数据计算和查询。
+- **定时任务**: 可能存在 `@Scheduled` 任务用于汇总 `article_daily_stats` 数据。
+- **API**: 
+    - `UserActivityRestController`: 提供 `/api/activities/**` 端点获取活动记录。
+    - `ArticleStatsRestController`: 提供 `/api/stats/article/{id}` 获取单篇统计，`/api/stats/trending` 获取热门文章。
+
+### 11.3.2 前端 (`ui/static/js/profile-stats.js`)
+
+- **活动历史**: 
+    - 调用 `/api/activities/user/{userId}` API 获取数据。
+    - 实现筛选下拉菜单和分页逻辑。
+    - 动态渲染活动列表项，根据活动类型显示不同图标和信息，正确解析评论内容。
+- **文章统计**: 
+    - 调用 `/api/articles` 获取用户文章列表填充下拉菜单。
+    - 实现 `loadAllArticlesStats` 函数：获取文章列表，循环调用 `/api/stats/article/{id}`，客户端聚合数据。
+    - 实现 `loadArticleStats` 函数：调用 `/api/stats/article/{id}` 获取单篇数据。
+    - 使用 Chart.js (`createArticleStatsChart` 函数) 绘制统计图。
+    - 处理下拉菜单和时间段按钮的事件。
+
+### 11.3.3 数据库 (`user_activity`, `article_daily_stats`)
+
+- (参考 #4 数据库设计 部分的表结构定义)
+
+## 11.4 注意事项
+
+- **聚合统计性能**: 当前 "All Articles" 统计是在前端通过多次 API 调用实现的。对于有大量文章的用户，这可能导致性能瓶颈和多次请求。未来可以考虑在后端实现一个专门的聚合统计 API 端点 (`/api/stats/user/{userId}` 或类似) 来优化。
+- **数据一致性**: 依赖定时任务确保 `article_daily_stats` 的准确性。

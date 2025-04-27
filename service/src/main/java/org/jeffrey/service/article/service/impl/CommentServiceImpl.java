@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.jeffrey.api.dto.interaction.CommentDTO;
+import org.jeffrey.api.enums.ActivityTypeEnum;
 import org.jeffrey.api.exception.ResourceNotFoundException;
 import org.jeffrey.api.vo.comment.CommentVO;
 import org.jeffrey.core.event.ArticleCommentEvent;
+import org.jeffrey.core.event.UserActivityEvent;
 import org.jeffrey.core.trace.TraceLog;
 import org.jeffrey.service.article.repository.entity.ArticleDO;
 import org.jeffrey.service.article.repository.entity.CommentDO;
@@ -56,6 +58,14 @@ public class CommentServiceImpl implements CommentService {
                 commentDTO.getUserId(),
                 commentDTO.getContent(),
                 commentDTO.getParentId()
+        ));
+
+        eventPublisher.publishEvent(new UserActivityEvent(
+                this,
+                commentDTO.getUserId(),
+                ActivityTypeEnum.COMMENT,
+                commentDTO.getArticleId(),
+                null
         ));
 
         // Create a response VO (without DB ID since processing is async)

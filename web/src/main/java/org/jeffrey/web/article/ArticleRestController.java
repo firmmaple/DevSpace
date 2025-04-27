@@ -73,7 +73,6 @@ public class ArticleRestController {
     public ResVo<ArticleVO> updateArticle(@PathVariable Long id,
                                           @RequestBody ArticleUpdateDTO updateDTO,
                                           @AuthenticationPrincipal CustomUserDetails currentUser) {
-        System.out.println("sjf debug: \n" + updateDTO);
         ArticleVO updatedArticle = articleService.updateArticle(id, updateDTO, currentUser.getUserId());
         return ResVo.ok(updatedArticle);
     }

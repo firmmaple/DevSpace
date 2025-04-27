@@ -17,6 +17,8 @@ import org.springframework.web.client.RestTemplate;
         org.jeffrey.service.user.repository.mapper.UserMapper.class,
         org.jeffrey.service.article.repository.mapper.ArticleMapper.class,
         org.jeffrey.service.article.repository.mapper.ArticleViewCountMapper.class,
+        org.jeffrey.service.activity.repository.mapper.ArticleDailyStatsMapper.class,
+        org.jeffrey.service.activity.repository.mapper.UserActivityMapper.class
 })
 
 @EnableElasticsearchRepositories(basePackages = "org.jeffrey.service.article.repository")

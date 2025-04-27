@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.jeffrey.service.activity.repository.mapper.ArticleDailyStatsMapper">
+
+    <!-- 获取文章指定日期范围内的统计数据 -->
+    <select id="findArticleStatsByDateRange" resultType="org.jeffrey.service.activity.repository.entity.ArticleDailyStatsDO">
+        SELECT * FROM article_daily_stats
+        WHERE article_id = #{articleId}
+        AND stat_date BETWEEN #{startDate} AND #{endDate}
+        ORDER BY stat_date ASC
+    </select>
+    
+    <!-- 批量更新或插入统计数据 -->
+    <insert id="batchUpsert">
+        INSERT INTO article_daily_stats
+            (article_id, stat_date, view_count, like_count, collect_count, comment_count)
+        VALUES
+        <foreach collection="stats" item="stat" separator=",">
+            (#{stat.articleId}, #{stat.statDate}, #{stat.viewCount}, #{stat.likeCount}, #{stat.collectCount}, #{stat.commentCount})
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            view_count = VALUES(view_count),
+            like_count = VALUES(like_count),
+            collect_count = VALUES(collect_count),
+            comment_count = VALUES(comment_count),
+            updated_at = NOW()
+    </insert>
+    
+    <!-- 获取最近一周热门文章（按访问量） -->
+    <select id="findTrendingArticlesByViews" resultType="org.jeffrey.service.activity.repository.entity.ArticleDailyStatsDO">
+        SELECT article_id, SUM(view_count) as view_count
+        FROM article_daily_stats
+        WHERE stat_date BETWEEN #{startDate} AND #{endDate}
+        GROUP BY article_id
+        ORDER BY view_count DESC
+        LIMIT #{limit}
+    </select>
+    
+    <!-- 获取过去N天的总数据 -->
+    <select id="getArticleTotalStatsByDays" resultType="org.jeffrey.service.activity.repository.entity.ArticleDailyStatsDO">
+        SELECT 
+            article_id,
+            SUM(view_count) as view_count,
+            SUM(like_count) as like_count,
+            SUM(collect_count) as collect_count,
+            SUM(comment_count) as comment_count
+        FROM article_daily_stats
+        WHERE article_id = #{articleId}
+        AND stat_date >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+        GROUP BY article_id
+    </select>
+
+</mapper> 

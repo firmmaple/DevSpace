@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.jeffrey.service.activity.repository.mapper.UserActivityMapper">
+
+    <!-- 获取用户最近的活动 -->
+    <select id="findUserRecentActivities" resultType="org.jeffrey.service.activity.repository.entity.UserActivityDO">
+        SELECT * FROM user_activity
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+    
+    <!-- 根据活动类型获取用户活动列表 -->
+    <select id="findUserActivitiesByType" resultType="org.jeffrey.service.activity.repository.entity.UserActivityDO">
+        SELECT * FROM user_activity
+        WHERE user_id = #{userId}
+        AND activity_type = #{activityType}
+        ORDER BY created_at DESC
+    </select>
+    
+    <!-- 获取文章相关的所有活动 -->
+    <select id="findArticleActivities" resultType="org.jeffrey.service.activity.repository.entity.UserActivityDO">
+        SELECT * FROM user_activity
+        WHERE target_id = #{articleId}
+        ORDER BY created_at DESC
+    </select>
+
+</mapper> 

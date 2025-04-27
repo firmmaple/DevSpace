@@ -1,105 +1,62 @@
--- 创建用户表
-CREATE TABLE `user` (
-                        `id` INT NOT NULL AUTO_INCREMENT COMMENT '用户ID',
-                        `username` VARCHAR(64) NOT NULL COMMENT '用户名',
-                        `password` VARCHAR(128) NOT NULL COMMENT '密码',
-                        `is_admin` TINYINT(1) DEFAULT '0' COMMENT '是否为管理员',
-                        `avatar_url` VARCHAR(255) DEFAULT NULL COMMENT '用户头像URL',
-                        `email` VARCHAR(255) DEFAULT NULL COMMENT '用户邮箱',
-                        `bio` TEXT DEFAULT NULL COMMENT '个人简介',
-                        `join_date` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
-                        PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+-- MySQL dump 10.13  Distrib 5.7.24, for osx11.1 (x86_64)
+--
+-- Host: localhost    Database: dev_space
+-- ------------------------------------------------------
+-- Server version	8.0.28
 
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
-INSERT INTO `user` (`id`, `username`, `password`, `is_admin`) VALUES (1, 'admin', '123', 1);
-INSERT INTO `user` (`id`, `username`, `password`, `avatar_url`, `bio`, `is_admin`) VALUES (2, 'meat', '123456', 'http://localhost:8088/api/file/avatars/White-Maltese.jpg', 'I am a meat', 1);
-INSERT INTO `user` (`id`, `username`, `password`, `avatar_url`, `bio`, `is_admin`) VALUES (3, 'jeffrey', '123', 'http://localhost:8088/api/file/avatars/Golden-Maltese.jpg', '喜欢捡垃圾！', 1);
-INSERT INTO `user` (`id`, `username`, `password`, `is_admin`) VALUES (4, 'user', '123', 0);
+--
+-- Table structure for table `article`
+--
 
+DROP TABLE IF EXISTS `article`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `article` (
-  `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '文章主键ID',
-  `title` VARCHAR(255) NOT NULL COMMENT '文章标题',
-  `summary` VARCHAR(512) DEFAULT NULL COMMENT '文章摘要',
-  `content` LONGTEXT NOT NULL COMMENT '文章内容 (Markdown or HTML)',
-  `image_url` VARCHAR(512) DEFAULT NULL COMMENT '文章封面图片URL',
-  `author_id` BIGINT NOT NULL COMMENT '作者用户ID',
-  `status` TINYINT DEFAULT 0 COMMENT '文章状态 (0:草稿, 1:已发布, 2:已删除)',
-  `is_hot` TINYINT(1) DEFAULT 0 COMMENT '是否为热门文章 (0:否, 1:是)',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  INDEX `idx_author_id` (`author_id`),
-  INDEX `idx_status_created` (`status`, `created_at`), -- For fetching published articles sorted by time
-  INDEX `idx_is_hot` (`is_hot`, `created_at`) -- For fetching hot articles
-  -- Maybe add FULLTEXT index later for basic search: FULLTEXT KEY `idx_title_content` (`title`,`content`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章表';
-
--- 插入测试文章数据
-INSERT INTO `article` (`title`, `summary`, `content`, `author_id`, `status`, `created_at`) VALUES 
-('Spring Boot 3.0 新特性解析', 
- 'Spring Boot 3.0带来了哪些重大变化？本文详细解析其新特性及升级指南。', 
- '# Spring Boot 3.0 新特性解析\n\n## 1. 概述\n\nSpring Boot 3.0是一个重大版本更新，带来了许多激动人心的变化。本文将详细介绍这些新特性。\n\n## 2. Java 17基础支持\n\nSpring Boot 3.0要求Java 17作为最低版本，充分利用了Java新特性如记录类、密封类等。\n\n## 3. 迁移到Jakarta EE\n\n所有API包名从javax.*迁移到jakarta.*，这是一个破坏性变更。\n\n## 4. 原生镜像支持\n\n通过GraalVM，Spring Boot 3.0提供了更好的原生镜像支持，大幅提升启动时间和减少内存占用。\n\n## 5. 性能优化\n\n框架核心组件经过重写，提供更好的性能表现。\n\n## 6. 总结\n\nSpring Boot 3.0是一次重大升级，虽然迁移需要一定工作量，但带来的性能提升和新特性值得投入。',
- 2, 1, '2023-07-15 10:30:00'),
- 
-('深入理解Java虚拟机', 
- 'JVM是Java平台的核心，本文深入剖析JVM内存模型、垃圾回收机制及性能调优技巧。', 
- '# 深入理解Java虚拟机\n\n## 1. JVM内存结构\n\nJava虚拟机在执行Java程序时会把它管理的内存划分为若干个不同的数据区域：\n\n- 堆区（Heap）\n- 方法区（Method Area）\n- 虚拟机栈（VM Stack）\n- 本地方法栈（Native Method Stack）\n- 程序计数器（Program Counter Register）\n\n## 2. 垃圾回收机制\n\nJVM的GC主要有以下几种算法：\n\n- 标记-清除算法\n- 复制算法\n- 标记-整理算法\n- 分代收集算法\n\n## 3. JVM性能调优\n\n性能调优主要从以下几个方面入手：\n\n- 内存分配\n- GC策略选择\n- JIT编译器优化\n- 线程优化\n\n## 4. 总结\n\n深入理解JVM对于解决Java应用的性能问题至关重要。',
- 3, 1, '2023-07-20 14:45:00'),
- 
-('微服务架构实践指南', 
- '从单体应用到微服务架构的演进，本文分享微服务设计、实现和运维的最佳实践。', 
- '# 微服务架构实践指南\n\n## 1. 微服务简介\n\n微服务是一种将应用程序构建为一系列小型服务的架构风格，每个服务运行在自己的进程中，通过轻量级机制通信。\n\n## 2. 服务拆分原则\n\n- 业务功能边界\n- 数据自治\n- 团队组织结构\n- 技术异构性\n\n## 3. 服务通信\n\n- 同步通信：REST、gRPC\n- 异步通信：消息队列\n- API网关\n\n## 4. 服务治理\n\n- 服务注册与发现\n- 负载均衡\n- 熔断与降级\n- 配置中心\n\n## 5. 微服务监控\n\n- 分布式追踪\n- 日志聚合\n- 指标监控\n- 告警系统\n\n## 6. 总结\n\n微服务架构带来了很多好处，但也增加了系统复杂性，需要谨慎选择和实施。',
- 4, 1, '2023-08-05 09:15:00'),
- 
-('Docker容器化应用实战', 
- '容器化正在改变应用的开发和部署方式，本文介绍Docker的核心概念和最佳实践。', 
- '# Docker容器化应用实战\n\n## 1. Docker基础\n\nDocker是一个开源的应用容器引擎，让开发者可以打包他们的应用以及依赖包到一个可移植的容器中。\n\n## 2. Dockerfile最佳实践\n\n```dockerfile\nFROM openjdk:17-jdk-slim\nWORKDIR /app\nCOPY target/*.jar app.jar\nENTRYPOINT ["java","-jar","/app/app.jar"]\n```\n\n## 3. Docker Compose\n\n使用Docker Compose编排多容器应用：\n\n```yaml\nversion: "3"\nservices:\n  app:\n    build: .\n    ports:\n      - "8080:8080"\n    depends_on:\n      - db\n  db:\n    image: mysql:8.0\n    environment:\n      MYSQL_ROOT_PASSWORD: root\n      MYSQL_DATABASE: testdb\n```\n\n## 4. 容器编排与管理\n\n在生产环境中，通常使用Kubernetes等工具进行容器编排。\n\n## 5. 总结\n\nDocker极大地简化了应用的打包、分发和部署过程，是现代DevOps不可或缺的工具。',
- 2, 1, '2023-08-10 16:20:00'),
- 
-('React Hooks深度剖析', 
- 'React Hooks改变了函数组件的能力边界，本文深入分析Hooks的工作原理和使用技巧。', 
- '# React Hooks深度剖析\n\n## 1. Hooks简介\n\nReact Hooks是React 16.8引入的新特性，它可以让你在不编写class的情况下使用state以及其他的React特性。\n\n## 2. 常用Hooks\n\n### useState\n\n```jsx\nconst [count, setCount] = useState(0);\n```\n\n### useEffect\n\n```jsx\nuseEffect(() => {\n  document.title = `You clicked ${count} times`;\n  return () => {\n    // cleanup\n  };\n}, [count]);\n```\n\n### useContext\n\n```jsx\nconst value = useContext(MyContext);\n```\n\n## 3. 自定义Hooks\n\n```jsx\nfunction useWindowSize() {\n  const [size, setSize] = useState({ width: 0, height: 0 });\n  \n  useEffect(() => {\n    const handleResize = () => {\n      setSize({ width: window.innerWidth, height: window.innerHeight });\n    };\n    \n    window.addEventListener("resize", handleResize);\n    handleResize();\n    \n    return () => window.removeEventListener("resize", handleResize);\n  }, []);\n  \n  return size;\n}\n```\n\n## 4. Hooks规则\n\n- 只在最顶层使用Hooks\n- 只在React函数中调用Hooks\n\n## 5. 总结\n\nHooks使React组件更加简洁、可复用，是现代React开发的核心。',
- 3, 1, '2023-08-15 11:30:00'),
- 
-('MySQL性能优化实战', 
- '数据库性能直接影响应用体验，本文分享MySQL索引设计、查询优化和服务器调优的实用技巧。', 
- '# MySQL性能优化实战\n\n## 1. 索引优化\n\n### 1.1 索引基础\n\nMySQL主要使用B+树索引，了解其结构有助于优化。\n\n### 1.2 索引设计原则\n\n- 最左前缀匹配原则\n- 选择区分度高的列建索引\n- 控制索引数量\n- 覆盖索引优化\n\n## 2. 查询优化\n\n### 2.1 EXPLAIN分析\n\n```sql\nEXPLAIN SELECT * FROM users WHERE name = "John";\n```\n\n### 2.2 常见优化手段\n\n- 避免SELECT *\n- 使用合适的WHERE条件\n- 优化JOIN操作\n- 使用适当的分页方式\n\n## 3. 服务器参数调优\n\n- innodb_buffer_pool_size\n- innodb_log_file_size\n- max_connections\n- query_cache_size\n\n## 4. 总结\n\nMySQL优化是一个系统工程，需要从应用设计、SQL编写、索引设计和服务器配置多方面入手。',
- 4, 1, '2023-08-20 13:45:00'),
- 
-('Git工作流最佳实践', 
- '高效的Git工作流可以提升团队协作效率，本文介绍几种流行的Git工作流模型及实践经验。', 
- '# Git工作流最佳实践\n\n## 1. 常见Git工作流\n\n### 1.1 Git Flow\n\n适合有计划发布周期的项目，包含以下分支：\n\n- master: 生产环境代码\n- develop: 开发环境代码\n- feature/*: 新功能分支\n- release/*: 发布准备分支\n- hotfix/*: 紧急修复分支\n\n### 1.2 GitHub Flow\n\n简化的工作流，适合持续部署：\n\n- main: 随时可部署的代码\n- feature/*: 新功能分支\n\n### 1.3 GitLab Flow\n\n结合了上述两种流的优点，增加了环境分支。\n\n## 2. 提交规范\n\n```\n<type>(<scope>): <subject>\n\n<body>\n\n<footer>\n```\n\n常见type：feat, fix, docs, style, refactor, test, chore\n\n## 3. 分支管理策略\n\n- 功能分支要小而专注\n- 定期从主分支同步更新\n- 使用Pull Request进行代码审查\n\n## 4. 总结\n\n选择合适的Git工作流并严格执行，可以显著提高团队协作效率。',
- 2, 1, '2023-08-25 15:10:00'),
- 
-('Kubernetes入门到实践', 
- 'Kubernetes已成为容器编排的事实标准，本文从基础概念到实际部署，全面介绍K8s的使用。', 
- '# Kubernetes入门到实践\n\n## 1. Kubernetes基础概念\n\n- Pod: 最小部署单元，包含一个或多个容器\n- Service: 为Pod提供稳定的网络访问方式\n- Deployment: 声明式更新Pod和ReplicaSet\n- ConfigMap/Secret: 配置管理\n- Namespace: 资源隔离\n\n## 2. 核心组件\n\n- kube-apiserver: API服务器，资源操作入口\n- etcd: 键值数据库，存储集群状态\n- kube-scheduler: 调度器，分配Pod到Node\n- kube-controller-manager: 控制器管理器\n- kubelet: 节点代理，管理容器\n- kube-proxy: 网络代理\n\n## 3. 部署应用示例\n\n```yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: nginx-deployment\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: nginx\n  template:\n    metadata:\n      labels:\n        app: nginx\n    spec:\n      containers:\n      - name: nginx\n        image: nginx:1.14.2\n        ports:\n        - containerPort: 80\n```\n\n## 4. Kubernetes生态\n\n- Helm: 包管理器\n- Istio: 服务网格\n- Prometheus: 监控系统\n- Fluentd: 日志收集\n\n## 5. 总结\n\nKubernetes虽然有一定学习曲线，但其强大的容器编排能力使其成为云原生应用的基础设施。',
- 3, 1, '2023-09-01 10:20:00'),
- 
-('RESTful API设计指南', 
- 'API设计直接影响开发体验，本文总结RESTful API的设计原则和最佳实践。', 
- '# RESTful API设计指南\n\n## 1. REST基础原则\n\n- 资源导向\n- 使用HTTP方法表达语义\n- 无状态\n- 统一接口\n\n## 2. URL设计\n\n- 使用名词表示资源: `/users`而非`/getUsers`\n- 资源集合用复数: `/articles`而非`/article`\n- 层级关系用嵌套表示: `/users/123/posts`\n- 过滤、排序、分页通过查询参数: `/users?role=admin&sort=created_at`\n\n## 3. HTTP方法使用\n\n- GET: 获取资源\n- POST: 创建资源\n- PUT: 全量更新资源\n- PATCH: 部分更新资源\n- DELETE: 删除资源\n\n## 4. 状态码使用\n\n- 2xx: 成功\n  - 200 OK: 请求成功\n  - 201 Created: 资源创建成功\n  - 204 No Content: 请求成功但无返回内容\n- 4xx: 客户端错误\n  - 400 Bad Request: 请求参数错误\n  - 401 Unauthorized: 未认证\n  - 403 Forbidden: 无权限\n  - 404 Not Found: 资源不存在\n- 5xx: 服务器错误\n\n## 5. 版本控制\n\n```\n/api/v1/users\n```\n\n## 6. 总结\n\n良好设计的API可以提高开发效率，降低沟通成本，是系统成功的关键因素。',
- 2, 1, '2023-09-05 14:30:00'),
- 
-('深入浅出设计模式', 
- '设计模式是解决软件设计中常见问题的可复用方案，本文介绍常用设计模式及其应用场景。', 
- '# 深入浅出设计模式\n\n## 1. 创建型模式\n\n### 1.1 单例模式\n\n```java\npublic class Singleton {\n    private static volatile Singleton instance;\n    \n    private Singleton() {}\n    \n    public static Singleton getInstance() {\n        if (instance == null) {\n            synchronized (Singleton.class) {\n                if (instance == null) {\n                    instance = new Singleton();\n                }\n            }\n        }\n        return instance;\n    }\n}\n```\n\n### 1.2 工厂方法模式\n\n### 1.3 抽象工厂模式\n\n### 1.4 建造者模式\n\n## 2. 结构型模式\n\n### 2.1 适配器模式\n\n### 2.2 装饰器模式\n\n### 2.3 代理模式\n\n## 3. 行为型模式\n\n### 3.1 观察者模式\n\n### 3.2 策略模式\n\n### 3.3 命令模式\n\n## 4. 设计模式的应用\n\n- Spring框架中的设计模式\n- Java标准库中的设计模式\n\n## 5. 总结\n\n设计模式不是银弹，应根据实际情况选择合适的模式，避免过度设计。',
- 3, 1, '2023-09-10 16:45:00');
-
--- Article Like Table
-CREATE TABLE IF NOT EXISTS `article_like` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `article_id` bigint NOT NULL COMMENT '文章ID',
-  `user_id` bigint NOT NULL COMMENT '用户ID',
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '文章主键ID',
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文章标题',
+  `summary` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '文章摘要',
+  `content` longtext COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文章内容 (Markdown or HTML)',
+  `image_url` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '文章封面图片URL',
+  `author_id` bigint NOT NULL COMMENT '作者用户ID',
+  `status` tinyint DEFAULT '0' COMMENT '文章状态 (0:草稿, 1:已发布, 2:已删除)',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_hot` tinyint(1) DEFAULT '0' COMMENT '是否为热门文章 (0:否, 1:是)',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_article_user` (`article_id`,`user_id`),
-  KEY `idx_article_id` (`article_id`),
-  KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='文章点赞表';
+  KEY `idx_author_id` (`author_id`),
+  KEY `idx_status_created` (`status`,`created_at`)
+) ENGINE=InnoDB AUTO_INCREMENT=1916259734944583682 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章表';
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- Article Collect Table
-CREATE TABLE IF NOT EXISTS `article_collect` (
+--
+-- Dumping data for table `article`
+--
+
+LOCK TABLES `article` WRITE;
+/*!40000 ALTER TABLE `article` DISABLE KEYS */;
+INSERT INTO `article` VALUES (1,'Spring Boot 3.0 新特性解析','Spring Boot 3.0带来了哪些重大变化？本文详细解析其新特性及升级指南。','# Spring Boot 3.0 新特性解析\n\n## 1. 概述\n\nSpring Boot 3.0是一个重大版本更新，带来了许多激动人心的变化。本文将详细介绍这些新特性。\n\n## 2. Java 17基础支持\n\nSpring Boot 3.0要求Java 17作为最低版本，充分利用了Java新特性如记录类、密封类等。\n\n## 3. 迁移到Jakarta EE\n\n所有API包名从javax.*迁移到jakarta.*，这是一个破坏性变更。\n\n## 4. 原生镜像支持\n\n通过GraalVM，Spring Boot 3.0提供了更好的原生镜像支持，大幅提升启动时间和减少内存占用。\n\n## 5. 性能优化\n\n框架核心组件经过重写，提供更好的性能表现。\n\n## 6. 总结\n\nSpring Boot 3.0是一次重大升级，虽然迁移需要一定工作量，但带来的性能提升和新特性值得投入。','http://localhost:8088/api/file/articles/springboot.png',2,1,'2023-07-15 02:30:00','2025-04-27 04:09:36',0),(2,'深入理解Java虚拟机','JVM是Java平台的核心，本文深入剖析JVM内存模型、垃圾回收机制及性能调优技巧。','# 深入理解Java虚拟机\n\n## 1. JVM内存结构\n\nJava虚拟机在执行Java程序时会把它管理的内存划分为若干个不同的数据区域：\n\n- 堆区（Heap）\n- 方法区（Method Area）\n- 虚拟机栈（VM Stack）\n- 本地方法栈（Native Method Stack）\n- 程序计数器（Program Counter Register）\n\n## 2. 垃圾回收机制\n\nJVM的GC主要有以下几种算法：\n\n- 标记-清除算法\n- 复制算法\n- 标记-整理算法\n- 分代收集算法\n\n## 3. JVM性能调优\n\n性能调优主要从以下几个方面入手：\n\n- 内存分配\n- GC策略选择\n- JIT编译器优化\n- 线程优化\n\n## 4. 总结\n\n深入理解JVM对于解决Java应用的性能问题至关重要。','http://localhost:8088/api/file/articles/JVM.jpg',3,1,'2023-07-20 06:45:00','2025-04-27 04:08:41',0),(3,'微服务架构实践指南','从单体应用到微服务架构的演进，本文分享微服务设计、实现和运维的最佳实践。','# 微服务架构实践指南\n\n## 1. 微服务简介\n\n微服务是一种将应用程序构建为一系列小型服务的架构风格，每个服务运行在自己的进程中，通过轻量级机制通信。\n\n## 2. 服务拆分原则\n\n- 业务功能边界\n- 数据自治\n- 团队组织结构\n- 技术异构性\n\n## 3. 服务通信\n\n- 同步通信：REST、gRPC\n- 异步通信：消息队列\n- API网关\n\n## 4. 服务治理\n\n- 服务注册与发现\n- 负载均衡\n- 熔断与降级\n- 配置中心\n\n## 5. 微服务监控\n\n- 分布式追踪\n- 日志聚合\n- 指标监控\n- 告警系统\n\n## 6. 总结\n\n微服务架构带来了很多好处，但也增加了系统复杂性，需要谨慎选择和实施。','http://localhost:8088/api/file/articles/microservices.jpg',4,1,'2023-08-05 01:15:00','2025-04-27 04:09:57',0),(4,'Docker容器化应用实战','容器化正在改变应用的开发和部署方式，本文介绍Docker的核心概念和最佳实践。','# Docker容器化应用实战\n\n## 1. Docker基础\n\nDocker是一个开源的应用容器引擎，让开发者可以打包他们的应用以及依赖包到一个可移植的容器中。\n\n## 2. Dockerfile最佳实践\n\n```dockerfile\nFROM openjdk:17-jdk-slim\nWORKDIR /app\nCOPY target/*.jar app.jar\nENTRYPOINT [\"java\",\"-jar\",\"/app/app.jar\"]\n```\n\n## 3. Docker Compose\n\n使用Docker Compose编排多容器应用：\n\n```yaml\nversion: \"3\"\nservices:\n  app:\n    build: .\n    ports:\n      - \"8080:8080\"\n    depends_on:\n      - db\n  db:\n    image: mysql:8.0\n    environment:\n      MYSQL_ROOT_PASSWORD: root\n      MYSQL_DATABASE: testdb\n```\n\n## 4. 容器编排与管理\n\n在生产环境中，通常使用Kubernetes等工具进行容器编排。\n\n## 5. 总结\n\nDocker极大地简化了应用的打包、分发和部署过程，是现代DevOps不可或缺的工具。','http://localhost:8088/api/file/articles/Docker-Container.png',2,1,'2023-08-10 08:20:00','2025-04-26 21:12:37',0),(5,'React Hooks深度剖析','React Hooks改变了函数组件的能力边界，本文深入分析Hooks的工作原理和使用技巧。','# React Hooks深度剖析\n\n## 1. Hooks简介\n\nReact Hooks是React 16.8引入的新特性，它可以让你在不编写class的情况下使用state以及其他的React特性。\n\n## 2. 常用Hooks\n\n### useState\n\n```jsx\nconst [count, setCount] = useState(0);\n```\n\n### useEffect\n\n```jsx\nuseEffect(() => {\n  document.title = `You clicked ${count} times`;\n  return () => {\n    // cleanup\n  };\n}, [count]);\n```\n\n### useContext\n\n```jsx\nconst value = useContext(MyContext);\n```\n\n## 3. 自定义Hooks\n\n```jsx\nfunction useWindowSize() {\n  const [size, setSize] = useState({ width: 0, height: 0 });\n  \n  useEffect(() => {\n    const handleResize = () => {\n      setSize({ width: window.innerWidth, height: window.innerHeight });\n    };\n    \n    window.addEventListener(\"resize\", handleResize);\n    handleResize();\n    \n    return () => window.removeEventListener(\"resize\", handleResize);\n  }, []);\n  \n  return size;\n}\n```\n\n## 4. Hooks规则\n\n- 只在最顶层使用Hooks\n- 只在React函数中调用Hooks\n\n## 5. 总结\n\nHooks使React组件更加简洁、可复用，是现代React开发的核心。','http://localhost:8088/api/file/articles/react-hooks.png',3,1,'2023-08-15 03:30:00','2025-04-27 04:06:27',1),(6,'MySQL性能优化实战','数据库性能直接影响应用体验，本文分享MySQL索引设计、查询优化和服务器调优的实用技巧。','# MySQL性能优化实战\n\n## 1. 索引优化\n\n### 1.1 索引基础\n\nMySQL主要使用B+树索引，了解其结构有助于优化。\n\n### 1.2 索引设计原则\n\n- 最左前缀匹配原则\n- 选择区分度高的列建索引\n- 控制索引数量\n- 覆盖索引优化\n\n## 2. 查询优化\n\n### 2.1 EXPLAIN分析\n\n```sql\nEXPLAIN SELECT * FROM users WHERE name = \"John\";\n```\n\n### 2.2 常见优化手段\n\n- 避免SELECT *\n- 使用合适的WHERE条件\n- 优化JOIN操作\n- 使用适当的分页方式\n\n## 3. 服务器参数调优\n\n- innodb_buffer_pool_size\n- innodb_log_file_size\n- max_connections\n- query_cache_size\n\n## 4. 总结\n\nMySQL优化是一个系统工程，需要从应用设计、SQL编写、索引设计和服务器配置多方面入手。','http://localhost:8088/api/file/articles/mysql.png',4,1,'2023-08-20 05:45:00','2025-04-27 04:05:30',0),(7,'Git工作流最佳实践','高效的Git工作流可以提升团队协作效率，本文介绍几种流行的Git工作流模型及实践经验。','# Git工作流最佳实践\n\n## 1. 常见Git工作流\n\n### 1.1 Git Flow\n\n适合有计划发布周期的项目，包含以下分支：\n\n- master: 生产环境代码\n- develop: 开发环境代码\n- feature/*: 新功能分支\n- release/*: 发布准备分支\n- hotfix/*: 紧急修复分支\n\n### 1.2 GitHub Flow\n\n简化的工作流，适合持续部署：\n\n- main: 随时可部署的代码\n- feature/*: 新功能分支\n\n### 1.3 GitLab Flow\n\n结合了上述两种流的优点，增加了环境分支。\n\n## 2. 提交规范\n\n```\n<type>(<scope>): <subject>\n\n<body>\n\n<footer>\n```\n\n常见type：feat, fix, docs, style, refactor, test, chore\n\n## 3. 分支管理策略\n\n- 功能分支要小而专注\n- 定期从主分支同步更新\n- 使用Pull Request进行代码审查\n\n## 4. 总结\n\n选择合适的Git工作流并严格执行，可以显著提高团队协作效率。','http://localhost:8088/api/file/articles/git.jpg',2,1,'2023-08-25 07:10:00','2025-04-27 04:02:53',0),(8,'Kubernetes入门到实践','Kubernetes已成为容器编排的事实标准，本文从基础概念到实际部署，全面介绍K8s的使用。','# Kubernetes入门到实践\n\n## 1. Kubernetes基础概念\n\n- Pod: 最小部署单元，包含一个或多个容器\n- Service: 为Pod提供稳定的网络访问方式\n- Deployment: 声明式更新Pod和ReplicaSet\n- ConfigMap/Secret: 配置管理\n- Namespace: 资源隔离\n\n## 2. 核心组件\n\n- kube-apiserver: API服务器，资源操作入口\n- etcd: 键值数据库，存储集群状态\n- kube-scheduler: 调度器，分配Pod到Node\n- kube-controller-manager: 控制器管理器\n- kubelet: 节点代理，管理容器\n- kube-proxy: 网络代理\n\n## 3. 部署应用示例\n\n```yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: nginx-deployment\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: nginx\n  template:\n    metadata:\n      labels:\n        app: nginx\n    spec:\n      containers:\n      - name: nginx\n        image: nginx:1.14.2\n        ports:\n        - containerPort: 80\n```\n\n## 4. Kubernetes生态\n\n- Helm: 包管理器\n- Istio: 服务网格\n- Prometheus: 监控系统\n- Fluentd: 日志收集\n\n## 5. 总结\n\nKubernetes虽然有一定学习曲线，但其强大的容器编排能力使其成为云原生应用的基础设施。','http://localhost:8088/api/file/articles/Kubernet.png',3,1,'2023-09-01 02:20:00','2025-04-27 04:03:23',0),(9,'RESTful API设计指南','API设计直接影响开发体验，本文总结RESTful API的设计原则和最佳实践。','# RESTful API设计指南\n\n## 1. REST基础原则\n\n- 资源导向\n- 使用HTTP方法表达语义\n- 无状态\n- 统一接口\n\n## 2. URL设计\n\n- 使用名词表示资源: `/users`而非`/getUsers`\n- 资源集合用复数: `/articles`而非`/article`\n- 层级关系用嵌套表示: `/users/123/posts`\n- 过滤、排序、分页通过查询参数: `/users?role=admin&sort=created_at`\n\n## 3. HTTP方法使用\n\n- GET: 获取资源\n- POST: 创建资源\n- PUT: 全量更新资源\n- PATCH: 部分更新资源\n- DELETE: 删除资源\n\n## 4. 状态码使用\n\n- 2xx: 成功\n  - 200 OK: 请求成功\n  - 201 Created: 资源创建成功\n  - 204 No Content: 请求成功但无返回内容\n- 4xx: 客户端错误\n  - 400 Bad Request: 请求参数错误\n  - 401 Unauthorized: 未认证\n  - 403 Forbidden: 无权限\n  - 404 Not Found: 资源不存在\n- 5xx: 服务器错误\n\n## 5. 版本控制\n\n```\n/api/v1/users\n```\n\n## 6. 总结\n\n良好设计的API可以提高开发效率，降低沟通成本，是系统成功的关键因素。','http://localhost:8088/api/file/articles/restful.png',2,1,'2023-09-05 06:30:00','2025-04-27 03:59:06',0),(10,'深入浅出设计模式','设计模式是解决软件设计中常见问题的可复用方案，本文介绍常用设计模式及其应用场景。','# 深入浅出设计模式\n\n## 1. 创建型模式\n\n### 1.1 单例模式\n\n```java\npublic class Singleton {\n    private static volatile Singleton instance;\n    \n    private Singleton() {}\n    \n    public static Singleton getInstance() {\n        if (instance == null) {\n            synchronized (Singleton.class) {\n                if (instance == null) {\n                    instance = new Singleton();\n                }\n            }\n        }\n        return instance;\n    }\n}\n```\n\n### 1.2 工厂方法模式\n\n### 1.3 抽象工厂模式\n\n### 1.4 建造者模式\n\n## 2. 结构型模式\n\n### 2.1 适配器模式\n\n### 2.2 装饰器模式\n\n### 2.3 代理模式\n\n## 3. 行为型模式\n\n### 3.1 观察者模式\n\n### 3.2 策略模式\n\n### 3.3 命令模式\n\n## 4. 设计模式的应用\n\n- Spring框架中的设计模式\n- Java标准库中的设计模式\n\n## 5. 总结\n\n设计模式不是银弹，应根据实际情况选择合适的模式，避免过度设计。','http://localhost:8088/api/file/articles/head-first.png',3,1,'2023-09-10 08:45:00','2025-04-27 03:57:51',0),(1916244097308397569,'demo','Unfortunately, I was not provided with an article to summarize. To create a summary, I will need the text of the article. Please provide the article text, and I will generate a summary that captures the main points in 3-5 sentences.','demo\ndemo\ndemo','http://localhost:8088/api/file/articles/2ecc8564-3123-41a9-8bad-e4bf743dc0f8.jpg',2,1,'2025-04-26 21:32:49','2025-04-26 21:33:49',0),(1916250064104296450,'Stream','Java Stream API 是 Java 8 引入的一个强大的特性，用于处理集合和其他数据源。它提供了一种更简洁、更函数式的方式来操作数据。','# Stream\n\n---\n\n今天我们来学习 Java 8 中一个非常强大的特性——Stream API。把它想象成一种处理集合（或者其他数据源）的流水线，能让你用更简洁、更函数式的方式来操作数据。\n\n## Java Stream 用法教程\n\n### 1. 什么是 Stream？为什么要用它？\n\n**想象一下：** 你有一箱子苹果（数据集合），你想：\n\n1.  挑出所有红色的苹果 (过滤 Filter)\n2.  把这些红苹果榨成汁 (转换 Map)\n3.  把苹果汁装到瓶子里 (收集 Collect)\n\n**传统做法：** 你可能需要写好几个 `for` 循环，创建临时的集合来存储中间结果，代码显得冗长。\n\n**Stream API 做法：** 就像建立一条流水线：\n`箱子 -> [挑红苹果工位] -> [榨汁工位] -> [装瓶工位] -> 最终产品`\n\n**Stream 就是这样一条处理数据的流水线。** 它本身不存储数据，而是按需从数据源（如集合、数组）获取数据，并通过一系列操作进行处理。\n\n**使用 Stream 的好处：**\n\n*   **代码简洁：** 用链式调用替代复杂的循环和条件判断。\n*   **函数式编程风格：** 操作更像是在描述“做什么”，而不是“怎么做”，代码可读性更好。\n*   **易于并行化：** Stream API 可以方便地切换到并行处理，提升大数据量下的性能（虽然并行化需要注意线程安全等问题）。\n*   **惰性求值（Lazy Evaluation）：** 中间操作不会立即执行，只有当终端操作需要结果时，整个流水线才会启动。这可以避免不必要的计算。\n\n---\n\n### 2. Stream 的基本组成\n\n一个典型的 Stream 操作流水线包含三个部分：\n\n1.  **数据源（Source）：** 产生 Stream 的地方。通常是集合（List, Set, Map）、数组，也可以是 I/O 通道或生成器函数。\n2.  **中间操作（Intermediate Operations）：** 对 Stream 进行处理，并返回一个新的 Stream。这些操作是**惰性**的，可以有多个。常见的有 `filter`, `map`, `sorted`, `distinct`, `limit`, `skip` 等。\n3.  **终端操作（Terminal Operations）：** 触发整个 Stream 流水线的执行，并产生最终结果或副作用。一个 Stream 只能有一个终端操作。常见的有 `forEach`, `collect`, `count`, `reduce`, `findFirst`, `anyMatch` 等。\n\n**记住这个公式：`数据源 -> Stream -> 零个或多个中间操作 -> 一个终端操作 -> 结果`**\n\n---\n\n### 3. 如何创建 Stream？\n\n常用的创建 Stream 的方式：\n\n* **从集合创建：**\n\n  ```java\n  List<String> list = Arrays.asList(\"a\", \"b\", \"c\");\n  Stream<String> stream = list.stream(); // 创建串行 Stream\n  Stream<String> parallelStream = list.parallelStream(); // 创建并行 Stream\n  \n  Set<String> set = new HashSet<>(list);\n  Stream<String> setStream = set.stream();\n  ```\n\n* **从数组创建：**\n\n  ```java\n  String[] array = {\"x\", \"y\", \"z\"};\n  Stream<String> arrayStream = Arrays.stream(array);\n  \n  int[] intArray = {1, 2, 3};\n  IntStream intStream = Arrays.stream(intArray); // 基本类型有专门的 Stream，如 IntStream, LongStream, DoubleStream\n  ```\n\n* **使用 `Stream.of()`：**\n\n  ```java\n  Stream<String> streamOf = Stream.of(\"apple\", \"banana\", \"orange\");\n  Stream<Integer> intStreamOf = Stream.of(1, 2, 3, 4, 5);\n  ```\n\n* **使用 `Stream.iterate()` (无限流，通常配合 `limit` 使用):**\n\n  ```java\n  // 生成 0, 2, 4, 6, 8\n  Stream<Integer> iteratedStream = Stream.iterate(0, n -> n + 2).limit(5);\n  iteratedStream.forEach(System.out::println); // 终端操作触发执行\n  ```\n\n* **使用 `Stream.generate()` (无限流，通常配合 `limit` 使用):**\n\n  ```java\n  // 生成 5 个随机数\n  Stream<Double> generatedStream = Stream.generate(Math::random).limit(5);\n  generatedStream.forEach(System.out::println); // 终端操作触发执行\n  ```\n\n---\n\n### 4. 常用的中间操作（Intermediate Operations）\n\n这些操作返回一个新的 Stream，可以链式调用。它们是**惰性**的！\n\n* **`filter(Predicate<T> predicate)`:** 过滤元素。保留满足条件的元素。\n\n  ```java\n  List<String> names = Arrays.asList(\"Alice\", \"Bob\", \"Charlie\", \"David\");\n  // 筛选出名字长度大于 4 的\n  Stream<String> longNamesStream = names.stream().filter(name -> name.length() > 4);\n  // 注意：此时 longNamesStream 还没有真正执行过滤，只是定义了操作\n  ```\n\n* **`map(Function<T, R> mapper)`:** 转换元素。将 Stream 中的每个元素 T 转换为 R。\n\n  ```java\n  List<String> words = Arrays.asList(\"hello\", \"world\");\n  // 将单词转换为大写\n  Stream<String> upperCaseStream = words.stream().map(String::toUpperCase); // 使用方法引用更简洁\n  // 将单词转换为长度\n  Stream<Integer> lengthStream = words.stream().map(String::length);\n  ```\n\n* **`sorted()` / `sorted(Comparator<T> comparator)`:** 排序。默认按自然顺序，也可提供比较器。\n\n  ```java\n  List<Integer> numbers = Arrays.asList(3, 1, 4, 1, 5, 9);\n  // 自然排序\n  Stream<Integer> sortedStream = numbers.stream().sorted();\n  // 倒序排序\n  Stream<Integer> reverseSortedStream = numbers.stream().sorted(Comparator.reverseOrder());\n  ```\n\n* **`distinct()`:** 去重。基于元素的 `equals()` 方法。\n\n  ```java\n  List<Integer> numsWithDuplicates = Arrays.asList(1, 2, 1, 3, 2, 4);\n  // 去重\n  Stream<Integer> distinctStream = numsWithDuplicates.stream().distinct(); // 结果会是 1, 2, 3, 4 (顺序可能变)\n  ```\n\n* **`limit(long maxSize)`:** 截断 Stream，使其元素不超过 maxSize。\n\n  ```java\n  Stream<Integer> infiniteStream = Stream.iterate(0, n -> n + 1);\n  // 获取前 10 个偶数\n  Stream<Integer> firstTenEven = infiniteStream.filter(n -> n % 2 == 0).limit(10);\n  ```\n\n* **`skip(long n)`:** 跳过前 n 个元素。\n\n  ```java\n  List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);\n  // 跳过前 2 个元素\n  Stream<Integer> skippedStream = numbers.stream().skip(2); // 结果会是 3, 4, 5\n  ```\n\n---\n\n### 5. 常用的终端操作（Terminal Operations）\n\n这些操作触发 Stream 的计算，并产生一个结果或副作用。一个 Stream 只能调用一次终端操作。\n\n* **`forEach(Consumer<T> action)`:** 对每个元素执行操作。无返回值 (`void`)。\n\n  ```java\n  List<String> names = Arrays.asList(\"Eric\", \"Sara\");\n  names.stream()\n       .map(String::toUpperCase)\n       .forEach(System.out::println); // 输出 ERIC, SARA\n  ```\n\n* **`collect(Collector<T, A, R> collector)`:** 将 Stream 中的元素收集到一个容器（如 List, Set, Map）或聚合成一个值。这是最常用的终端操作之一。\n\n  ```java\n  List<String> fruits = Arrays.asList(\"Apple\", \"Banana\", \"Avocado\", \"Apricot\");\n  \n  // 收集到 List\n  List<String> aFruitsList = fruits.stream()\n                                   .filter(f -> f.startsWith(\"A\"))\n                                   .collect(Collectors.toList()); // [\"Apple\", \"Avocado\", \"Apricot\"]\n  \n  // 收集到 Set (自动去重)\n  Set<String> fruitSet = fruits.stream().collect(Collectors.toSet());\n  \n  // 收集到 Map (例如：水果名 -> 长度)\n  Map<String, Integer> fruitLengthMap = fruits.stream()\n                                              .distinct() // 确保 key 唯一\n                                              .collect(Collectors.toMap(\n                                                  f -> f, // key mapper\n                                                  String::length // value mapper\n                                              ));\n  \n  // 连接字符串\n  String joinedFruits = fruits.stream().collect(Collectors.joining(\", \")); // \"Apple, Banana, Avocado, Apricot\"\n  ```\n\n* **`count()`:** 返回 Stream 中的元素个数。\n\n  ```java\n  long count = Arrays.asList(1, 2, 3, 4, 5).stream().count(); // count is 5\n  ```\n\n* **`reduce(BinaryOperator<T> accumulator)` / `reduce(T identity, BinaryOperator<T> accumulator)`:** 将 Stream 中的元素组合起来得到一个值（例如求和、求积）。\n\n  ```java\n  List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);\n  // 求和 (无初始值，返回 Optional)\n  Optional<Integer> sumOptional = numbers.stream().reduce((a, b) -> a + b);\n  // 求和 (有初始值 0)\n  int sum = numbers.stream().reduce(0, (a, b) -> a + b); // sum is 15\n  // 求最大值\n  Optional<Integer> max = numbers.stream().reduce(Integer::max);\n  ```\n\n* **`anyMatch(Predicate<T> predicate)`:** Stream 中是否有**任何一个**元素满足条件？返回 `boolean`。\n\n  ```java\n  boolean hasEven = Arrays.asList(1, 3, 5, 6).stream().anyMatch(n -> n % 2 == 0); // true\n  ```\n\n* **`allMatch(Predicate<T> predicate)`:** Stream 中是否**所有**元素都满足条件？返回 `boolean`。\n\n  ```java\n  boolean allEven = Arrays.asList(2, 4, 6).stream().allMatch(n -> n % 2 == 0); // true\n  boolean notAllEven = Arrays.asList(2, 3, 6).stream().allMatch(n -> n % 2 == 0); // false\n  ```\n\n* **`noneMatch(Predicate<T> predicate)`:** Stream 中是否**没有**元素满足条件？返回 `boolean`。\n\n  ```java\n  boolean noneNegative = Arrays.asList(1, 2, 3).stream().noneMatch(n -> n < 0); // true\n  ```\n\n* **`findFirst()`:** 返回 Stream 中的第一个元素。返回 `Optional<T>`。\n\n  ```java\n  Optional<String> first = Arrays.asList(\"a\", \"b\", \"c\").stream().findFirst(); // Optional[\"a\"]\n  ```\n\n* **`findAny()`:** 返回 Stream 中的任意一个元素（在并行流中效率更高）。返回 `Optional<T>`。\n\n  ```java\n  Optional<String> any = Arrays.asList(\"a\", \"b\", \"c\").parallelStream().findAny(); // 可能返回 Optional[\"a\"], [\"b\"], or [\"c\"]\n  ```\n\n  *   **`Optional<T>`**: 这是一个容器对象，可能包含也可能不包含非 `null` 值。用于避免 `NullPointerException`。你需要使用 `isPresent()` 检查是否有值，`get()` 获取值（不安全），或者使用 `orElse()`, `orElseGet()`, `ifPresent()` 等更安全的方法。\n\n---\n\n### 6. 示例：把它们串起来！\n\n假设我们有一个 `Person` 类：\n\n```java\nclass Person {\n    String name;\n    int age;\n    String city;\n\n    // Constructor, getters...\n    public Person(String name, int age, String city) { this.name = name; this.age = age; this.city = city; }\n    public String getName() { return name; }\n    public int getAge() { return age; }\n    public String getCity() { return city; }\n    @Override public String toString() { return name + \"(\" + age + \", \" + city + \")\"; }\n}\n```\n\n**任务：** 找到所有来自 \"New York\" 且年龄大于等于 18 岁的人的姓名，并按字母顺序排序，最后收集到一个 List 中。\n\n```java\nList<Person> people = Arrays.asList(\n    new Person(\"Alice\", 25, \"New York\"),\n    new Person(\"Bob\", 17, \"London\"),\n    new Person(\"Charlie\", 30, \"New York\"),\n    new Person(\"Diana\", 16, \"New York\"),\n    new Person(\"Evan\", 40, \"Paris\")\n);\n\nList<String> adultNamesFromNY = people.stream() // 1. 获取 Stream\n    .filter(p -> \"New York\".equals(p.getCity())) // 2. 筛选城市为 New York (中间操作)\n    .filter(p -> p.getAge() >= 18)             // 3. 筛选年龄 >= 18 (中间操作)\n    .map(Person::getName)                      // 4. 获取姓名 (中间操作)\n    .sorted()                                  // 5. 按姓名排序 (中间操作)\n    .collect(Collectors.toList());             // 6. 收集到 List (终端操作，触发执行)\n\nSystem.out.println(adultNamesFromNY); // 输出: [Alice, Charlie]\n```\n\n看，是不是非常清晰和连贯？\n\n---\n\n### 7. 重要注意事项\n\n1. **Stream 只能消费一次：** 一个 Stream 流水线被终端操作触发执行后，就不能再重用了。如果需要再次操作，必须从数据源重新创建 Stream。\n\n   ```java\n   Stream<String> stream = Stream.of(\"a\", \"b\");\n   stream.forEach(System.out::println); // 第一次消费，OK\n   // stream.count(); // 再消费，会抛出 IllegalStateException: stream has already been operated upon or closed\n   ```\n\n2. **Stream 不修改源数据：** Stream 操作是函数式的，它们不会改变原始的集合或数组。像 `collect` 这样的操作是生成一个新的集合。\n\n3. **惰性求值：** 中间操作只有在终端操作被调用时才会执行。这允许进行优化，例如 `filter().limit()` 可能不会处理所有元素。\n\n4. **并行流（Parallel Streams）：** 使用 `parallelStream()` 或 `.parallel()` 可以轻松切换到并行模式。但请注意：\n\n   *   并非所有操作都适合并行。\n   *   需要确保操作是无状态的、关联的，并且干预是安全的（例如，避免修改共享状态）。\n   *   小数据量下，并行开销可能超过收益。\n\n---\n\n### 8. 总结\n\n同学们，Java Stream API 是一个强大的工具，它能让你的数据处理代码变得：\n\n*   **更短 (Concise)**\n*   **更清晰 (Readable)**\n*   **更灵活 (Flexible)**\n*   **可能更快 (Potentially Faster with Parallelism)**\n\n掌握 Stream 的关键在于理解**数据源、中间操作（惰性）、终端操作（触发）** 这三个核心概念，并熟悉常用的操作方法。\n\n**课后作业：**\n尝试用 Stream API 解决你之前用 `for` 循环处理集合的问题，比如：\n\n1.  计算一个整数列表的平均值。\n2.  将一个字符串列表中的所有字符串连接成一个长字符串，用逗号分隔。\n3.  统计一个列表中某个元素出现的次数。\n\n**动手实践是最好的学习方式！** 希望大家勤加练习，熟练掌握 Stream API！\n\n**下课！** 如果有任何问题，随时可以提问。\n\n# Optional\n\n---\n\n好的，同学们！继上次我们学习了强大的 Stream API 之后，今天我们来深入了解一个与它紧密相关，并且同样非常重要的 Java 8 特性——`Optional<T>`。\n\n---\n\n## Java `Optional<T>` 用法教程\n\n**大家好！继续我们的 Java 探索之旅。今天的主角是 `Optional`。**\n\n### 1. 为什么需要 `Optional`？告别 `NullPointerException`！\n\n相信大家在写 Java 代码时，都或多或少遇到过那个令人头疼的 `NullPointerException` (NPE)。这通常发生在你试图调用一个值为 `null` 的对象的方法或访问其字段时。\n\n**传统做法：** 为了避免 NPE，我们常常需要写大量的 `if (variable != null)` 检查，这让代码显得冗余且容易遗漏。\n\n```java\n// 传统方式，容易出错\nString value = possiblyNullMethod();\nif (value != null) {\n    System.out.println(value.toUpperCase());\n}\n\n// 如果忘记检查，且 value 为 null，就会抛出 NullPointerException\n// System.out.println(value.toUpperCase()); // <-- BOOM! NPE here if value is null\n```\n\n**`Optional` 的出现就是为了解决这个问题！**\n\n`Optional<T>` 是一个**容器类（Container Class）**，它可以代表一个**可能存在也可能不存在**的值（T 类型）。把它想象成一个盒子：\n\n*   这个盒子里**可能**装了一个 T 类型的物品。\n*   这个盒子也**可能**是空的。\n\n**使用 `Optional` 的核心思想：**\n\n*   **明确表示值的缺失可能性：** 当一个方法的返回值类型是 `Optional<T>` 时，它清晰地告诉调用者：“嘿，我可能不会返回一个有效的值，请做好处理空情况的准备！”\n*   **鼓励显式处理空值：** `Optional` 提供了一套流畅的 API，让你以更安全、更优雅的方式处理值存在或不存在的场景，而不是依赖容易忘记的 `null` 检查。\n*   **减少 `NullPointerException`：** 通过引导开发者使用其 API 来处理可能为空的情况，从而大大降低 NPE 的风险。\n\n**重要：`Optional` 主要目的是用于方法的返回值，表明返回结果可能为空。** 不建议将其用作类的字段或方法的参数（后面会详细说明）。\n\n---\n\n### 2. 如何创建 `Optional` 对象？\n\n有三种主要方式创建 `Optional` 实例：\n\n1. **`Optional.of(T value)`:**\n\n   *   创建一个包含**非 null 值**的 `Optional`。\n   *   **注意：** 如果你传给 `of()` 的 `value` 是 `null`，它会**立即抛出 `NullPointerException`**。这适用于你确定值不应该是 `null` 的情况。\n\n   ```java\n   String name = \"Alice\";\n   Optional<String> optName = Optional.of(name); // Contains \"Alice\"\n   \n   // String nullName = null;\n   // Optional<String> optNull = Optional.of(nullName); // 立刻抛出 NullPointerException!\n   ```\n\n2. **`Optional.empty()`:**\n\n   *   创建一个**空的 `Optional`** 实例。表示值不存在。\n\n   ```java\n   Optional<String> emptyOpt = Optional.empty(); // Represents an absent value\n   ```\n\n3. **`Optional.ofNullable(T value)`:**\n\n   *   这是**最常用、最安全**的创建方式。\n   *   如果 `value` **非 null**，它会创建一个包含该值的 `Optional`（行为类似 `of()`）。\n   *   如果 `value` **是 null**，它会创建一个**空的 `Optional`**（行为类似 `empty()`）。\n\n   ```java\n   String possibleName = getPossibleName(); // 这个方法可能返回 null\n   \n   Optional<String> optPossibleName = Optional.ofNullable(possibleName);\n   // 如果 possibleName 是 \"Bob\"，optPossibleName 包含 \"Bob\"\n   // 如果 possibleName 是 null，optPossibleName 是空的 Optional\n   ```\n\n---\n\n### 3. 如何使用 `Optional` 对象？（核心！）\n\n一旦你拿到了一个 `Optional` 对象，关键在于如何安全、优雅地使用它包含的值（如果存在的话）。**尽量避免直接调用 `get()` 方法！**\n\n#### 3.1 检查值是否存在\n\n*   **`isPresent()`:** 如果 `Optional` 包含一个非 `null` 值，返回 `true`，否则返回 `false`。\n*   **`isEmpty()` (Java 11+)**: 与 `isPresent()` 相反，如果 `Optional` 为空，返回 `true`。\n\n```java\nOptional<String> opt = Optional.ofNullable(findUserById(\"123\")); // findUserById 可能返回 null\n\nif (opt.isPresent()) {\n    System.out.println(\"User found: \" + opt.get()); // 虽然这里用了 get()，但在 isPresent() 保护下是安全的\n} else {\n    System.out.println(\"User not found.\");\n}\n\n// 使用 isEmpty() (Java 11+)\nif (opt.isEmpty()) {\n    System.out.println(\"User not found.\");\n} else {\n     System.out.println(\"User found: \" + opt.get());\n}\n```\n\n虽然 `isPresent()` 可以用，但 `Optional` 提供了更流畅的方式来处理，见下文。\n\n#### 3.2 安全地获取值（推荐的方式）\n\n* **`orElse(T other)`:**\n\n  *   如果 `Optional` 中有值，返回值。\n  *   如果 `Optional` 为空，返回你提供的**默认值 `other`**。\n  *   **注意：** 无论 `Optional` 是否为空，`other` 这个默认值（或创建它的表达式）**总是会被计算/执行**。\n\n  ```java\n  String name = Optional.ofNullable(findUserName())\n                        .orElse(\"Default User\"); // 如果找不到用户，名字就是 \"Default User\"\n  System.out.println(\"Username: \" + name);\n  ```\n\n* **`orElseGet(Supplier<? extends T> other)`:**\n\n  *   如果 `Optional` 中有值，返回值。\n  *   如果 `Optional` 为空，调用 `Supplier` 函数接口（一个无参函数），并返回其**执行结果**作为默认值。\n  *   **优点：** 只有当 `Optional` 为空时，`Supplier` 中的代码（可能比较耗时）才会被执行，这是一种**懒加载**。\n\n  ```java\n  // 假设 createDefaultUser() 是一个比较耗时的方法\n  User user = Optional.ofNullable(findUserById(\"abc\"))\n                      .orElseGet(() -> createDefaultUser()); // 只有找不到用户时，才调用 createDefaultUser()\n  \n  // 对比 orElse:\n  // User user = Optional.ofNullable(findUserById(\"abc\"))\n  //                     .orElse(createDefaultUser()); // 无论找没找到，createDefaultUser() 都会被执行！\n  ```\n\n* **`orElseThrow()` (Java 10+) / `orElseThrow(Supplier<? extends X> exceptionSupplier)`:**\n\n  *   如果 `Optional` 中有值，返回值。\n  *   如果 `Optional` 为空，抛出指定的异常。\n  *   `orElseThrow()` (无参，Java 10+) 默认抛出 `NoSuchElementException`。\n  *   `orElseThrow(exceptionSupplier)` 允许你指定抛出哪种异常。\n\n  ```java\n  // 要求用户必须存在，否则是业务异常\n  String userId = \"xyz\";\n  User mandatoryUser = Optional.ofNullable(findUserById(userId))\n                               .orElseThrow(() -> new UserNotFoundException(\"User with ID \" + userId + \" not found\"));\n  ```\n\n#### 3.3 不安全地获取值（**强烈不推荐！**）\n\n*   **`get()`:**\n    *   如果 `Optional` 中有值，返回值。\n    *   如果 `Optional` 为空，**直接抛出 `NoSuchElementException`**！\n    *   **为什么不推荐？** 因为这和直接访问可能为 `null` 的变量然后遇到 NPE 没太大区别，它没有体现出 `Optional` 的“安全处理空值”的设计初衷。你应该总是优先使用 `orElse`, `orElseGet`, `orElseThrow` 或下面的 `ifPresent` 等方法。**只有在你 100% 确定 `Optional` 非空时（比如刚做过 `isPresent()` 判断），`get()` 才是相对安全的，但通常有更好的替代方案。**\n\n#### 3.4 值存在时执行操作\n\n* **`ifPresent(Consumer<? super T> action)`:**\n\n  *   如果 `Optional` 中有值，就对该值执行 `Consumer` 函数接口提供的操作（一个接受参数但无返回值的函数）。\n  *   如果 `Optional` 为空，什么也不做。\n  *   非常适合“如果值存在就做某事”的场景，避免了 `if (opt.isPresent()) { opt.get().doSomething(); }` 的写法。\n\n  ```java\n  Optional<String> emailOpt = Optional.ofNullable(getUserEmail());\n  emailOpt.ifPresent(email -> {\n      System.out.println(\"Sending email to: \" + email);\n      sendEmail(email); // 只在 email 存在时调用 sendEmail\n  });\n  ```\n\n* **`ifPresentOrElse(Consumer<? super T> action, Runnable emptyAction)` (Java 9+):**\n\n  *   如果 `Optional` 有值，执行 `action` (Consumer)。\n  *   如果 `Optional` 为空，执行 `emptyAction` (Runnable，无参无返回值的函数)。\n\n  ```java\n  Optional<User> userOpt = Optional.ofNullable(getCurrentUser());\n  userOpt.ifPresentOrElse(\n      user -> System.out.println(\"Welcome back, \" + user.getName()), // 值存在时执行\n      () -> System.out.println(\"Please log in.\")                     // 值为空时执行\n  );\n  ```\n\n#### 3.5 转换 `Optional` 中的值（函数式风格）\n\n* **`map(Function<? super T, ? extends U> mapper)`:**\n\n  *   如果 `Optional` 有值，将 `mapper` 函数应用到该值上，得到结果 `U`。\n  *   如果 `mapper` 返回的结果**非 null**，则返回一个包含该结果的 `Optional<U>`。\n  *   如果 `mapper` 返回的结果是 **null**，或者原始 `Optional` 为空，则返回 `Optional.empty()`。\n  *   用于对 `Optional` 中的值进行**一级转换**。\n\n  ```java\n  Optional<User> userOpt = Optional.ofNullable(findUserById(\"123\"));\n  \n  // 获取用户的名字 (String)\n  Optional<String> nameOpt = userOpt.map(User::getName); // user -> user.getName()\n  \n  nameOpt.ifPresent(name -> System.out.println(\"User name: \" + name));\n  \n  // 示例：获取名字长度\n  Optional<Integer> nameLengthOpt = userOpt.map(User::getName) // Optional<String>\n                                           .map(String::length); // Optional<Integer>\n  ```\n\n* **`flatMap(Function<? super T, ? extends Optional<? extends U>> mapper)`:**\n\n  *   与 `map` 类似，也是将 `mapper` 函数应用到 `Optional` 的值上（如果存在）。\n  *   **关键区别：** `flatMap` 要求 `mapper` 函数的**返回值本身必须是一个 `Optional<U>`**。\n  *   它不会像 `map` 那样再把结果包一层 `Optional`，而是直接返回 `mapper` 函数产生的 `Optional<U>`。\n  *   用于处理**嵌套的 `Optional`** 或者当你的转换逻辑本身就返回 `Optional` 时。避免出现 `Optional<Optional<T>>` 这种情况。\n\n  ```java\n  class User {\n      // ...\n      // 获取地址可能返回 Optional<Address>\n      Optional<Address> getAddress() { ... }\n  }\n  class Address {\n      // ...\n      // 获取邮编可能返回 Optional<String>\n      Optional<String> getZipCode() { ... }\n  }\n  \n  Optional<User> userOpt = Optional.ofNullable(findUserById(\"456\"));\n  \n  // 错误方式：使用 map 会导致 Optional<Optional<String>>\n  // Optional<Optional<String>> nestedZipOpt = userOpt.map(User::getAddress) // Optional<Optional<Address>> ? (取决于 getAddress 返回值)\n  //                                                  .map(optAddr -> optAddr.map(Address::getZipCode)); // 这里逻辑复杂且易错\n  \n  // 正确方式：使用 flatMap \"展平\" 嵌套\n  Optional<String> zipCodeOpt = userOpt.flatMap(User::getAddress)     // 返回 Optional<Address>\n                                       .flatMap(Address::getZipCode); // 返回 Optional<String>\n  \n  zipCodeOpt.ifPresent(zip -> System.out.println(\"Zip code: \" + zip));\n  ```\n\n  **简单记忆：** 如果你的 `mapper` 函数返回的是 `T`，用 `map`；如果返回的是 `Optional<T>`，用 `flatMap`。\n\n#### 3.6 过滤 `Optional` 中的值\n\n* **`filter(Predicate<? super T> predicate)`:**\n\n  *   如果 `Optional` 有值，并且该值满足 `predicate` 条件（返回 `true`），则返回原 `Optional`。\n  *   如果 `Optional` 有值但不满足条件，或者 `Optional` 本身为空，则返回 `Optional.empty()`。\n\n  ```java\n  Optional<User> userOpt = Optional.ofNullable(findUserById(\"789\"));\n  \n  // 只处理年龄大于等于 18 的用户\n  Optional<User> adultUserOpt = userOpt.filter(user -> user.getAge() >= 18);\n  \n  adultUserOpt.ifPresent(user -> System.out.println(\"Adult user found: \" + user.getName()));\n  // 如果找到的用户不满 18 岁，adultUserOpt 也会是空的\n  ```\n\n---\n\n### 4. `Optional` 与 Stream API 的结合\n\n`Optional` 经常作为 Stream API 中某些终端操作（如 `findFirst()`, `findAny()`, `reduce()`, `max()`, `min()`）的返回值，因为这些操作不一定能找到结果。\n\n```java\nList<String> names = Arrays.asList(\"Alice\", \"Bob\", \"Charlie\");\n\n// 查找第一个名字以 \'A\' 开头的\nOptional<String> firstA = names.stream()\n                              .filter(name -> name.startsWith(\"A\"))\n                              .findFirst(); // 返回 Optional<String>\n\nfirstA.ifPresent(name -> System.out.println(\"First name starting with A: \" + name)); // 输出: First name starting with A: Alice\n\n// 查找最大长度的名字\nOptional<String> longestName = names.stream()\n                                   .max(Comparator.comparingInt(String::length)); // 返回 Optional<String>\n\nlongestName.ifPresent(name -> System.out.println(\"Longest name: \" + name)); // 输出: Longest name: Charlie\n\n// 如果列表为空，上面的 firstA 和 longestName 都会是 Optional.empty()\nList<String> emptyList = Collections.emptyList();\nOptional<String> result = emptyList.stream().findFirst(); // result is Optional.empty()\nSystem.out.println(result.orElse(\"No element found\")); // 输出: No element found\n```\n\n---\n\n### 5. `Optional` 的最佳实践和注意事项\n\n1.  **主要用于返回值：** 如前所述，`Optional` 最适合用作方法的返回值，清晰表明结果可能缺失。\n2.  **不要用作字段：** 在类中定义 `Optional<T>` 类型的字段通常是不必要的，并且会给序列化带来麻烦。如果一个字段是可选的，直接允许它为 `null`，并在访问它时进行处理（例如，在 getter 中返回 `Optional`）。\n3.  **不要用作方法参数：** 用 `Optional<T>` 作为方法参数会迫使调用者必须创建一个 `Optional` 对象来包装参数，这很笨拙。如果一个参数是可选的，更好的方式是使用方法重载（提供一个带该参数和一个不带该参数的版本）或者在方法内部处理 `null`。\n4.  **不要用于集合：** 创建 `List<Optional<String>>` 或 `Map<Key, Optional<Value>>` 通常是个坏主意。这增加了复杂性。更好的做法是直接在集合中存储存在的元素，或者过滤掉 `null` 值，或者使用特殊的标记值（如果适用）。\n5.  **避免过度使用 `isPresent()`-`get()` 模式：** 尽量使用 `orElse`, `orElseGet`, `orElseThrow`, `ifPresent`, `map`, `flatMap`, `filter` 等更流畅、更安全的 API。`if (opt.isPresent()) { return opt.get(); } else { return defaultValue; }` 完全可以用 `opt.orElse(defaultValue)` 替代。\n6.  **`Optional` 不是万能药：** 它主要解决的是“一个值可能不存在”的情况。对于复杂的业务逻辑或错误处理，异常（Exceptions）仍然是重要的机制。\n\n---\n\n### 6. 总结\n\n同学们，`Optional<T>` 是 Java 8 引入的一个非常有用的工具，它能帮助我们：\n\n*   **更清晰地表达代码意图**（这个返回值可能为空）。\n*   **编写更健壮、更少 NPE 的代码**。\n*   **以更流畅的函数式风格处理可能缺失的值**。\n\n掌握 `Optional` 的关键在于理解它的**目的**（处理潜在的 `null`）和**核心 API**（`ofNullable`, `orElse`, `orElseGet`, `ifPresent`, `map`, `flatMap` 等）。\n\n**练习一下：**\n尝试修改你以前代码中处理 `null` 的地方，看看是否能用 `Optional` 来改进？比如，一个从 Map 中根据 key 获取 value 的方法，如果 key 不存在，Map 的 `get` 方法会返回 `null`，这正是 `Optional.ofNullable()` 的用武之地！\n\n希望大家能熟练运用 `Optional`，让我们的 Java 代码更加优雅和安全！\n\n','http://localhost:8088/api/file/articles/23c5746b-c5be-4fd8-8a28-555d28c970b3.jpg',2,1,'2025-04-26 21:56:32','2025-04-27 03:51:13',1),(1916258575991279617,'Sort','在 Java 中，对自定义数据结构进行排序有两种主流方法：实现 `Comparable` 接口（自然排序）和使用 `Comparator`（灵活排序）。','在 Java 中，对**自定义数据结构**进行排序，通常有两种主流方法：\n\n---\n\n### 1. 让你的数据结构实现 `Comparable` 接口（**自然排序**）\n\n比如你有一个 `Student` 类，想根据 `age` 排序：\n\n```java\npublic class Student implements Comparable<Student> {\n    String name;\n    int age;\n\n    public Student(String name, int age) {\n        this.name = name;\n        this.age = age;\n    }\n\n    @Override\n    public int compareTo(Student other) {\n        return Integer.compare(this.age, other.age);\n    }\n}\n```\n\n然后可以直接用 `Collections.sort()` 排：\n\n```java\nList<Student> students = new ArrayList<>();\nstudents.add(new Student(\"Alice\", 22));\nstudents.add(new Student(\"Bob\", 20));\nstudents.add(new Student(\"Charlie\", 25));\n\nCollections.sort(students);  // 按 age 从小到大排序\n```\n\n---\n\n### 2. 使用 `Comparator`（**灵活排序**）\n\n如果你不想在类里写死排序逻辑，而是希望**外部定义排序方式**，用 `Comparator`：\n\n```java\nList<Student> students = new ArrayList<>();\nstudents.add(new Student(\"Alice\", 22));\nstudents.add(new Student(\"Bob\", 20));\nstudents.add(new Student(\"Charlie\", 25));\n\n// 根据 name 排序\nstudents.sort(Comparator.comparing(student -> student.name));\n\n// 或者根据 age 降序排序\nstudents.sort((s1, s2) -> Integer.compare(s2.age, s1.age));\n```\n\n---\n\n### 总结一张小表\n\n| 方法         | 适用情况                             | 特点                        |\n| ------------ | ------------------------------------ | --------------------------- |\n| `Comparable` | 只有一种默认排序逻辑                 | 类内部写死 `compareTo` 方法 |\n| `Comparator` | 需要多种排序方式（按名字、按年龄等） | 排序逻辑独立于类外面        |','http://localhost:8088/api/file/articles/d5a8c22e-464f-47cf-a8a8-da3fc34ec3d8.png',2,1,'2025-04-26 22:30:21','2025-04-27 03:49:55',1),(1916259734944583681,'Spring Factory','这篇文章介绍了工厂模式（Factory Pattern），一种常用的设计模式，旨在将创建对象的过程封装起来，使客户端代码不需要知道具体是哪个类被实例化，也不需要关心复杂的创建细节。','这篇文章用具体的例子带你一步步理解**工厂模式 (Factory Pattern)**。这是一种非常有用的设计模式，能让你的代码更灵活、更易于维护。\n\n**核心思想:** 将**创建对象的过程**封装起来，让客户端（使用对象的代码）不需要知道具体是哪个类被实例化，也不需要关心复杂的创建细节。客户端只需要向“工厂”索要一个特定类型的对象即可。\n\n**要解决的问题:** 假设你的代码需要根据不同的情况创建不同类型的对象。如果不使用工厂模式，你的代码可能会像这样：\n\n```java\n// 不好的方式：客户端代码直接创建对象，与具体类耦合\nString type = getUserInput(); // 假设用户输入 \"Dog\" 或 \"Cat\"\nAnimal animal;\n\nif (\"Dog\".equalsIgnoreCase(type)) {\n    animal = new Dog(); // 直接依赖 Dog 类\n} else if (\"Cat\".equalsIgnoreCase(type)) {\n    animal = new Cat(); // 直接依赖 Cat 类\n} else {\n    animal = null; // 或者抛出异常\n    System.out.println(\"Unknown animal type\");\n}\n\nif (animal != null) {\n    animal.speak();\n}\n\n// 问题：\n// 1. 客户端代码依赖具体的 Dog 和 Cat 类。\n// 2. 如果要添加新的动物（比如 Bird），必须修改这里的 if/else 逻辑，违反了“开闭原则”。\n// 3. 创建逻辑散落在客户端代码中。\n```\n\n工厂模式就是为了解决这些问题。我们来看两种最常见的工厂模式变体：\n\n---\n\n**1. 简单工厂模式 (Simple Factory Pattern)** - *最常用，但不算官方 GoF 设计模式之一*\n\n**概念:** 提供一个**专门的工厂类**，它有一个静态方法（或其他方法），根据传入的参数来决定创建并返回哪种具体的产品对象。\n\n**例子:** 创建一个动物工厂 `AnimalFactory`。\n\n* **步骤 1: 定义产品接口** (所有产品共有的行为)\n\n  ```java\n  // 产品接口\n  interface Animal {\n      void speak();\n  }\n  ```\n\n* **步骤 2: 创建具体产品类**\n\n  ```java\n  // 具体产品 A\n  class Dog implements Animal {\n      @Override\n      public void speak() {\n          System.out.println(\"Woof Woof!\");\n      }\n  }\n  \n  // 具体产品 B\n  class Cat implements Animal {\n      @Override\n      public void speak() {\n          System.out.println(\"Meow!\");\n      }\n  }\n  \n  // 可以轻松添加新产品\n  class Bird implements Animal {\n      @Override\n      public void speak() {\n          System.out.println(\"Tweet Tweet!\");\n      }\n  }\n  ```\n\n* **步骤 3: 创建简单工厂类**\n\n  ```java\n  // 简单工厂\n  class AnimalFactory {\n      // 静态工厂方法 - 根据类型创建动物\n      public static Animal createAnimal(String type) {\n          if (type == null || type.isEmpty()) {\n              return null;\n          }\n          if (\"Dog\".equalsIgnoreCase(type)) {\n              return new Dog(); // 创建逻辑封装在这里\n          } else if (\"Cat\".equalsIgnoreCase(type)) {\n              return new Cat(); // 创建逻辑封装在这里\n          } else if (\"Bird\".equalsIgnoreCase(type)) {\n              return new Bird(); // 创建逻辑封装在这里\n          } else {\n              System.out.println(\"Unknown animal type: \" + type);\n              return null; // 或者抛出异常\n          }\n      }\n  }\n  ```\n\n* **步骤 4: 客户端使用工厂**\n\n  ```java\n  public class SimpleFactoryDemo {\n      public static void main(String[] args) {\n          // 客户端不再直接 new Dog() 或 new Cat()\n          // 它只依赖 Animal 接口和 AnimalFactory 工厂类\n  \n          Animal dog = AnimalFactory.createAnimal(\"Dog\");\n          if (dog != null) {\n              System.out.print(\"Dog says: \");\n              dog.speak();\n          }\n  \n          Animal cat = AnimalFactory.createAnimal(\"Cat\");\n          if (cat != null) {\n              System.out.print(\"Cat says: \");\n              cat.speak();\n          }\n  \n          Animal bird = AnimalFactory.createAnimal(\"Bird\");\n           if (bird != null) {\n              System.out.print(\"Bird says: \");\n              bird.speak();\n          }\n  \n          Animal unknown = AnimalFactory.createAnimal(\"Fish\"); // 工厂处理未知类型\n          if (unknown == null) {\n              System.out.println(\"Could not create Fish.\");\n          }\n      }\n  }\n  ```\n\n**简单工厂的好处:**\n\n*   **封装:** 创建对象的逻辑被集中到工厂类中，客户端代码更简洁。\n*   **解耦:** 客户端代码不再依赖具体的 `Dog`, `Cat` 类，只依赖 `Animal` 接口和 `AnimalFactory`。\n*   **易于维护:** 如果 `Dog` 的创建方式变复杂了（比如需要传入参数），只需要修改工厂内部，客户端代码不受影响。\n\n**简单工厂的缺点:**\n\n*   **违反开闭原则:** 如果要添加新的动物类型（比如 `Fish`），仍然**必须修改 `AnimalFactory` 类**中的 `if/else` 判断逻辑。\n*   工厂类职责过重，包含了所有产品的创建逻辑。\n\n---\n\n**2. 工厂方法模式 (Factory Method Pattern)** - *标准的 GoF 设计模式之一*\n\n**概念:** 定义一个用于创建对象的**接口（或抽象类）**，但让**子类**决定实例化哪一个具体类。工厂方法模式将对象的实例化延迟到子类。\n\n**例子:** 继续动物的例子，但这次我们让不同的工厂负责创建不同的动物。\n\n* **步骤 1 & 2:** 产品接口 `Animal` 和具体产品 `Dog`, `Cat`, `Bird` 保持不变。\n\n* **步骤 3: 定义抽象工厂接口/类**\n\n  ```java\n  // 抽象工厂接口/类\n  interface AnimalFactoryInterface {\n      // 工厂方法 - 返回一个 Animal 对象\n      Animal createAnimal();\n  }\n  // 或者使用抽象类\n  /*\n  abstract class AbstractAnimalFactory {\n      // 工厂方法\n      public abstract Animal createAnimal();\n  \n      // 也可以有其他通用方法\n      public void someCommonOperation() { ... }\n  }\n  */\n  ```\n\n* **步骤 4: 创建具体工厂类** (每个工厂负责创建一种特定的动物)\n\n  ```java\n  // 具体工厂 A - 专门创建 Dog\n  class DogFactory implements AnimalFactoryInterface {\n      @Override\n      public Animal createAnimal() {\n          System.out.println(\"DogFactory: Creating a Dog...\");\n          return new Dog(); // 只负责创建 Dog\n      }\n  }\n  \n  // 具体工厂 B - 专门创建 Cat\n  class CatFactory implements AnimalFactoryInterface {\n      @Override\n      public Animal createAnimal() {\n          System.out.println(\"CatFactory: Creating a Cat...\");\n          return new Cat(); // 只负责创建 Cat\n      }\n  }\n  \n  // 添加新动物时，只需添加新的具体工厂\n  class BirdFactory implements AnimalFactoryInterface {\n       @Override\n      public Animal createAnimal() {\n          System.out.println(\"BirdFactory: Creating a Bird...\");\n          return new Bird();\n      }\n  }\n  ```\n\n* **步骤 5: 客户端使用** (客户端现在需要决定使用哪个工厂)\n\n  ```java\n  public class FactoryMethodDemo {\n      public static void main(String[] args) {\n          // 客户端决定使用哪个工厂\n  \n          // 使用 Dog 工厂\n          AnimalFactoryInterface dogFactory = new DogFactory();\n          Animal dog = dogFactory.createAnimal(); // 工厂方法创建 Dog\n          System.out.print(\"Dog created by factory says: \");\n          dog.speak();\n  \n          System.out.println(\"--------------------\");\n  \n          // 使用 Cat 工厂\n          AnimalFactoryInterface catFactory = new CatFactory();\n          Animal cat = catFactory.createAnimal(); // 工厂方法创建 Cat\n          System.out.print(\"Cat created by factory says: \");\n          cat.speak();\n  \n           System.out.println(\"--------------------\");\n  \n           // 使用 Bird 工厂\n          AnimalFactoryInterface birdFactory = new BirdFactory();\n          Animal bird = birdFactory.createAnimal();\n          System.out.print(\"Bird created by factory says: \");\n          bird.speak();\n  \n          // 客户端现在依赖抽象工厂接口和产品接口，而不是具体产品类\n          // 也不需要在客户端进行 if/else 判断来选择创建哪个对象\n      }\n  }\n  ```\n\n**工厂方法的好处:**\n\n*   **遵循开闭原则:** 当需要添加新的动物（产品）时，只需要添加一个新的具体动物类和一个对应的具体工厂类即可，**不需要修改**现有的工厂接口或任何已有的工厂类和客户端代码。扩展性非常好。\n*   **解耦:** 客户端代码只依赖产品接口和抽象工厂接口。\n*   **职责单一:** 每个具体工厂只负责创建一种具体产品。\n\n**工厂方法的缺点:**\n\n*   **类的数量增加:** 每添加一个产品，就需要添加一个对应的具体工厂类，导致系统中的类数量增多。\n\n---\n\n**总结:**\n\n*   **简单工厂:** 适用于产品类型较少，或者产品类型不经常变化的场景。代码相对简单，但扩展性稍差。\n*   **工厂方法:** 适用于产品类型较多，或者需要经常扩展新产品类型的场景。代码结构更复杂一些，但扩展性、灵活性和对开闭原则的支持更好。\n\n在 Spring 中，`BeanFactory` 和各种 `FactoryBean` 的实现就大量运用了工厂模式的思想，帮助 Spring 容器管理和创建复杂的 Bean 对象，实现了强大的解耦和灵活性。`ConnectionFactory` 也是这个思想的具体体现，它封装了创建连接的逻辑，使得你可以方便地获取连接对象。','http://localhost:8088/api/file/articles/4b6f35f3-727f-42b3-9379-973dbbaaa6d8.jpg',2,0,'2025-04-26 22:34:57','2025-04-27 03:49:05',0);
+/*!40000 ALTER TABLE `article` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `article_collect`
+--
+
+DROP TABLE IF EXISTS `article_collect`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `article_collect` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `article_id` bigint NOT NULL COMMENT '文章ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
@@ -109,13 +66,85 @@ CREATE TABLE IF NOT EXISTS `article_collect` (
   KEY `idx_article_id` (`article_id`),
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='文章收藏表';
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- Comment Table
-CREATE TABLE IF NOT EXISTS `comment` (
+--
+-- Dumping data for table `article_collect`
+--
+
+LOCK TABLES `article_collect` WRITE;
+/*!40000 ALTER TABLE `article_collect` DISABLE KEYS */;
+/*!40000 ALTER TABLE `article_collect` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `article_like`
+--
+
+DROP TABLE IF EXISTS `article_like`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `article_like` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `article_id` bigint NOT NULL COMMENT '文章ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
-  `content` text NOT NULL COMMENT '评论内容',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_article_user` (`article_id`,`user_id`),
+  KEY `idx_article_id` (`article_id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='文章点赞表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `article_like`
+--
+
+LOCK TABLES `article_like` WRITE;
+/*!40000 ALTER TABLE `article_like` DISABLE KEYS */;
+/*!40000 ALTER TABLE `article_like` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `article_viewcount`
+--
+
+DROP TABLE IF EXISTS `article_viewcount`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `article_viewcount` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `article_id` bigint NOT NULL COMMENT '文章ID',
+  `view_count` bigint NOT NULL DEFAULT '0' COMMENT '浏览量',
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_article_id` (`article_id`),
+  KEY `idx_view_count` (`view_count` DESC)
+) ENGINE=InnoDB AUTO_INCREMENT=1916330221271879683 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='文章浏览量表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `article_viewcount`
+--
+
+LOCK TABLES `article_viewcount` WRITE;
+/*!40000 ALTER TABLE `article_viewcount` DISABLE KEYS */;
+INSERT INTO `article_viewcount` VALUES (1916237456093581313,1,0,'2025-04-27 05:06:26'),(1916237456169078785,2,0,'2025-04-27 05:06:26'),(1916237456181661697,3,0,'2025-04-27 05:06:26'),(1916237456194244610,4,1,'2025-04-27 05:06:26'),(1916237456206827521,5,1,'2025-04-27 05:06:26'),(1916237456211021826,6,0,'2025-04-27 05:06:26'),(1916237456215216129,7,0,'2025-04-27 05:06:26'),(1916237456223604737,8,0,'2025-04-27 05:06:26'),(1916237456227799041,9,2,'2025-04-27 05:06:26'),(1916237456236187650,10,25,'2025-04-27 05:06:26'),(1916245006260211714,1916244097308397569,4,'2025-04-27 05:36:26'),(1916251239818039297,1916250064104296450,5,'2025-04-27 06:01:12'),(1916258873560371202,1916258575991279617,11,'2025-04-27 06:31:32'),(1916330221271879682,1916259734944583681,1,'2025-04-27 11:15:03');
+/*!40000 ALTER TABLE `article_viewcount` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `comment`
+--
+
+DROP TABLE IF EXISTS `comment`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `comment` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `article_id` bigint NOT NULL COMMENT '文章ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `content` text COLLATE utf8mb4_general_ci NOT NULL COMMENT '评论内容',
   `parent_id` bigint DEFAULT NULL COMMENT '父评论ID，顶层评论为NULL',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -123,15 +152,56 @@ CREATE TABLE IF NOT EXISTS `comment` (
   KEY `idx_article_id` (`article_id`),
   KEY `idx_user_id` (`user_id`),
   KEY `idx_parent_id` (`parent_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='评论表';
+) ENGINE=InnoDB AUTO_INCREMENT=1916383047704379395 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='评论表';
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- Article View Count Table
-CREATE TABLE IF NOT EXISTS `article_viewcount` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `article_id` bigint NOT NULL COMMENT '文章ID',
-  `view_count` bigint NOT NULL DEFAULT 0 COMMENT '浏览量',
-  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_article_id` (`article_id`),
-  KEY `idx_view_count` (`view_count` DESC)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='文章浏览量表';
+--
+-- Dumping data for table `comment`
+--
+
+LOCK TABLES `comment` WRITE;
+/*!40000 ALTER TABLE `comment` DISABLE KEYS */;
+INSERT INTO `comment` VALUES (1916338063366262786,10,2,'写得真好！',NULL,'2025-04-27 11:46:13','2025-04-27 11:46:13'),(1916338229494255617,10,3,'谢谢！',1916338063366262786,'2025-04-27 11:46:52','2025-04-27 11:46:52'),(1916383047704379394,1916258575991279617,3,'1111',NULL,'2025-04-27 14:44:58','2025-04-27 14:44:58');
+/*!40000 ALTER TABLE `comment` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user`
+--
+
+DROP TABLE IF EXISTS `user`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `user` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '用户ID',
+  `username` varchar(64) NOT NULL COMMENT '用户名',
+  `password` varchar(128) NOT NULL COMMENT '密码',
+  `is_admin` tinyint(1) DEFAULT '0' COMMENT '是否为管理员',
+  `avatar_url` varchar(255) DEFAULT NULL COMMENT '用户头像URL',
+  `email` varchar(255) DEFAULT NULL COMMENT '用户邮箱',
+  `bio` text COMMENT '个人简介',
+  `join_date` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user`
+--
+
+LOCK TABLES `user` WRITE;
+/*!40000 ALTER TABLE `user` DISABLE KEYS */;
+INSERT INTO `user` VALUES (1,'admin','123',1,NULL,NULL,NULL,'2025-04-27 05:04:33'),(2,'meat','123456',1,'http://localhost:8088/api/file/avatars/White-Maltese.jpg',NULL,'I am a meat','2025-04-27 05:04:33'),(3,'jeffrey','123',1,'http://localhost:8088/api/file/avatars/Golden-Maltese.jpg',NULL,'喜欢捡垃圾！','2025-04-27 05:04:33'),(4,'user','123',0,NULL,NULL,NULL,'2025-04-27 05:04:33');
+/*!40000 ALTER TABLE `user` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2025-04-27 15:24:17
