@@ -98,13 +98,13 @@ public class ArticleRestController {
         return ResVo.ok(page);
     }
 
-    @GetMapping("/hot")
-    @TraceLog("获取热门文章API")
-    public ResVo<IPage<ArticleSummaryVO>> getHotArticles(
+    @GetMapping("/recommended")
+    @TraceLog("获取推荐文章API")
+    public ResVo<IPage<ArticleSummaryVO>> getRecommendedArticles(
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "10") int pageSize
     ) {
-        IPage<ArticleSummaryVO> page = articleService.getHotArticles(pageNum, pageSize);
+        IPage<ArticleSummaryVO> page = articleService.getRecommendedArticles(pageNum, pageSize);
         return ResVo.ok(page);
     }
 

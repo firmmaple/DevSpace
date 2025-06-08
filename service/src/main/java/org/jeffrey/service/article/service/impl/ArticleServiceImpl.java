@@ -21,11 +21,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.stereotype.Service;
-import org.jeffrey.core.event.ArticleCollectEvent;
-import org.jeffrey.core.event.ArticleLikeEvent;
-import org.springframework.context.ApplicationEventPublisher;
+
+import org.jeffrey.api.dto.interaction.CollectDTO;
+import org.jeffrey.api.dto.interaction.LikeDTO;
+import org.jeffrey.core.mq.MQPublisher;
+import org.jeffrey.core.mq.RabbitMQConfig;
 import org.jeffrey.service.article.repository.mapper.ArticleLikeMapper;
 import org.jeffrey.service.article.repository.mapper.ArticleCollectMapper;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,6 +60,7 @@ public class ArticleServiceImpl implements ArticleService {
     final private SearchService searchService; // 添加SearchService依赖
     final private ArticleViewCountService viewCountService; // 添加ArticleViewCountService依赖
     final private ObjectMapper objectMapper;
+    final private MQPublisher mqPublisher; // 添加MQ发布器依赖
 
     // 使用懒加载和字段注入方式解决循环依赖
     @Autowired
@@ -71,7 +75,9 @@ public class ArticleServiceImpl implements ArticleService {
             ArticleLikeMapper likeMapper,
             ArticleCollectMapper collectMapper,
             SearchService searchService,
-            ArticleViewCountService viewCountService, ObjectMapper objectMapper) {
+            ArticleViewCountService viewCountService, 
+            ObjectMapper objectMapper,
+            MQPublisher mqPublisher) {
         this.articleMapper = articleMapper;
         this.userService = userService;
         this.eventPublisher = eventPublisher;
@@ -80,6 +86,7 @@ public class ArticleServiceImpl implements ArticleService {
         this.searchService = searchService;
         this.viewCountService = viewCountService;
         this.objectMapper = objectMapper;
+        this.mqPublisher = mqPublisher;
     }
 
     @Override
@@ -272,8 +279,13 @@ public class ArticleServiceImpl implements ArticleService {
             throw new ResourceNotFoundException("Article not found with ID: " + articleId);
         }
         
-        // Publish event - asynchronous processing
-        eventPublisher.publishEvent(new ArticleLikeEvent(this, articleId, userId, true));
+        // 直接发送RabbitMQ消息
+        LikeDTO likeDTO = new LikeDTO(articleId, userId, true);
+        mqPublisher.sendMessage(
+                RabbitMQConfig.INTERACTION_EXCHANGE,
+                RabbitMQConfig.LIKE_ROUTING_KEY,
+                likeDTO
+        );
     }
 
     @Override
@@ -284,8 +296,13 @@ public class ArticleServiceImpl implements ArticleService {
             throw new ResourceNotFoundException("Article not found with ID: " + articleId);
         }
         
-        // Publish event - asynchronous processing
-        eventPublisher.publishEvent(new ArticleLikeEvent(this, articleId, userId, false));
+        // 直接发送RabbitMQ消息
+        LikeDTO likeDTO = new LikeDTO(articleId, userId, false);
+        mqPublisher.sendMessage(
+                RabbitMQConfig.INTERACTION_EXCHANGE,
+                RabbitMQConfig.LIKE_ROUTING_KEY,
+                likeDTO
+        );
     }
 
     @Override
@@ -296,8 +313,13 @@ public class ArticleServiceImpl implements ArticleService {
             throw new ResourceNotFoundException("Article not found with ID: " + articleId);
         }
         
-        // Publish event - asynchronous processing
-        eventPublisher.publishEvent(new ArticleCollectEvent(this, articleId, userId, true));
+        // 直接发送RabbitMQ消息
+        CollectDTO collectDTO = new CollectDTO(articleId, userId, true);
+        mqPublisher.sendMessage(
+                RabbitMQConfig.INTERACTION_EXCHANGE,
+                RabbitMQConfig.COLLECT_ROUTING_KEY,
+                collectDTO
+        );
     }
 
     @Override
@@ -308,8 +330,13 @@ public class ArticleServiceImpl implements ArticleService {
             throw new ResourceNotFoundException("Article not found with ID: " + articleId);
         }
         
-        // Publish event - asynchronous processing
-        eventPublisher.publishEvent(new ArticleCollectEvent(this, articleId, userId, false));
+        // 直接发送RabbitMQ消息
+        CollectDTO collectDTO = new CollectDTO(articleId, userId, false);
+        mqPublisher.sendMessage(
+                RabbitMQConfig.INTERACTION_EXCHANGE,
+                RabbitMQConfig.COLLECT_ROUTING_KEY,
+                collectDTO
+        );
     }
 
     @Override
@@ -470,7 +497,7 @@ public class ArticleServiceImpl implements ArticleService {
         vo.setImageUrl(articleDO.getImageUrl()); // 设置封面图片URL
         vo.setAuthorId(articleDO.getAuthorId());
         vo.setStatus(articleDO.getStatus());
-        vo.setIsHot(articleDO.getIsHot()); // 复制热门状态
+        vo.setIsRecommended(articleDO.getIsRecommended()); // 复制推荐状态
         vo.setCreatedAt(articleDO.getCreatedAt());
 
         // Get author username
@@ -570,15 +597,15 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     @Override
-    @TraceLog("切换文章热门状态")
-    public boolean toggleArticleHotStatus(Long articleId, Boolean isHot) {
+    @TraceLog("切换文章推荐状态")
+    public boolean toggleArticleRecommendedStatus(Long articleId, Boolean isRecommended) {
         ArticleDO article = articleMapper.selectById(articleId);
         if (article == null || article.getStatus() == 2) { // 文章不存在或已删除
             return false;
         }
 
-        // 更新热门状态
-        article.setIsHot(isHot);
+        // 更新推荐状态
+        article.setIsRecommended(isRecommended);
         int result = articleMapper.updateById(article);
 
         // 如果是已发布状态，更新Elasticsearch索引
@@ -595,13 +622,13 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     @Override
-    @TraceLog("获取热门文章列表")
-    public IPage<ArticleSummaryVO> getHotArticles(int pageNum, int pageSize) {
+    @TraceLog("获取推荐文章列表")
+    public IPage<ArticleSummaryVO> getRecommendedArticles(int pageNum, int pageSize) {
         Page<ArticleDO> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ArticleDO> wrapper = new LambdaQueryWrapper<>();
 
-        // 只获取热门且已发布的文章
-        wrapper.eq(ArticleDO::getIsHot, true)
+        // 只获取推荐且已发布的文章
+        wrapper.eq(ArticleDO::getIsRecommended, true)
                .eq(ArticleDO::getStatus, 1); // 发布状态
 
         // 按创建时间降序排序

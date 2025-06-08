@@ -23,7 +23,7 @@ public class ArticleVO implements Serializable { // For detailed view
     private String authorAvatarUrl; // Author's avatar URL
     private String authorBio; // Author's bio
     private Integer status;
-    private Boolean isHot; // 是否为热门文章
+    private Boolean isRecommended; // 是否为推荐文章
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     // Add interaction counts later (views, likes, collects)

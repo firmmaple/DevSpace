@@ -29,9 +29,9 @@ public class HomeController {
         model.addAttribute("currentPage", "home");
         model.addAttribute("viewName", "index");
         
-        // 获取热门文章
-        IPage<ArticleSummaryVO> hotArticlesPage = articleService.getHotArticles(1, 6);
-        List<ArticleSummaryVO> topArticles = hotArticlesPage.getRecords();
+        // 获取推荐文章
+        IPage<ArticleSummaryVO> recommendedArticlesPage = articleService.getRecommendedArticles(1, 6);
+        List<ArticleSummaryVO> topArticles = recommendedArticlesPage.getRecords();
 
         // 获取最新发布的文章（已发布状态的文章）
         IPage<ArticleSummaryVO> recentArticlesPage = articleService.listArticles(1, 10, null, 1);

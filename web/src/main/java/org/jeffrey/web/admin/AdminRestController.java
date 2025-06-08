@@ -104,4 +104,23 @@ public class AdminRestController {
             return ResVo.fail(StatusEnum.UNEXPECT_ERROR, "更新用户管理员权限失败: " + e.getMessage());
         }
     }
+
+    @TraceLog("管理员切换文章推荐状态")
+    @PutMapping("/articles/{articleId}/recommended")
+    public ResVo<Boolean> toggleRecommendedStatus(@PathVariable String articleId, @RequestParam Boolean isRecommended) {
+        try {
+            Long id = Long.parseLong(articleId);
+            boolean result = articleService.toggleArticleRecommendedStatus(id, isRecommended);
+            if (result) {
+                return ResVo.ok(true);
+            } else {
+                return ResVo.fail(StatusEnum.UNEXPECT_ERROR, "更新文章推荐状态失败");
+            }
+        } catch (NumberFormatException e) {
+            return ResVo.fail(StatusEnum.ILLEGAL_ARGUMENTS, "文章ID格式不正确");
+        } catch (Exception e) {
+            log.error("更新文章推荐状态失败: " + articleId, e);
+            return ResVo.fail(StatusEnum.UNEXPECT_ERROR, "更新文章推荐状态失败: " + e.getMessage());
+        }
+    }
 } 

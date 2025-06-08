@@ -6,7 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.jeffrey.api.dto.interaction.CollectDTO;
 import org.jeffrey.api.dto.interaction.CommentDTO;
 import org.jeffrey.api.dto.interaction.LikeDTO;
+import org.jeffrey.api.enums.ActivityTypeEnum;
+import org.jeffrey.core.event.UserActivityEvent;
 import org.jeffrey.core.mq.RabbitMQConfig;
+import org.jeffrey.service.activity.service.UserActivityService;
 import org.jeffrey.service.article.repository.entity.ArticleCollectDO;
 import org.jeffrey.service.article.repository.entity.ArticleLikeDO;
 import org.jeffrey.service.article.repository.entity.CommentDO;
@@ -14,6 +17,7 @@ import org.jeffrey.service.article.repository.mapper.ArticleCollectMapper;
 import org.jeffrey.service.article.repository.mapper.ArticleLikeMapper;
 import org.jeffrey.service.article.repository.mapper.ArticleMapper;
 import org.jeffrey.service.article.repository.mapper.CommentMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
@@ -35,6 +39,8 @@ public class ArticleInteractionConsumer {
     private final ArticleLikeMapper likesMapper;
     private final ArticleCollectMapper collectMapper;
     private final CommentMapper commentMapper;
+    private final UserActivityService userActivityService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @RabbitListener(queues = RabbitMQConfig.LIKE_QUEUE)
     public void handleLikeMessage(@Payload LikeDTO likeDTO,
@@ -52,6 +58,14 @@ public class ArticleInteractionConsumer {
                     likeDO.setUserId(likeDTO.getUserId());
                     likeDO.setCreatedAt(LocalDateTime.now());
                     likesMapper.insert(likeDO);
+                    
+                    // 记录用户活动
+                    eventPublisher.publishEvent(new UserActivityEvent(
+                            this,
+                            likeDTO.getUserId(),
+                            ActivityTypeEnum.LIKE_ARTICLE,
+                            likeDTO.getArticleId()
+                    ));
                     
                     // Could update article like count in article table for faster retrieval
                     // articleMapper.incrementLikeCount(likeDTO.getArticleId());
@@ -94,6 +108,14 @@ public class ArticleInteractionConsumer {
                     collectDO.setCreatedAt(LocalDateTime.now());
                     collectMapper.insert(collectDO);
                     
+                    // 记录用户活动
+                    eventPublisher.publishEvent(new UserActivityEvent(
+                            this,
+                            collectDTO.getUserId(),
+                            ActivityTypeEnum.COLLECT_ARTICLE,
+                            collectDTO.getArticleId()
+                    ));
+                    
                     // Could update article collect count in article table for faster retrieval
                     // articleMapper.incrementCollectCount(collectDTO.getArticleId());
                 }
@@ -134,6 +156,14 @@ public class ArticleInteractionConsumer {
             commentDO.setCreatedAt(LocalDateTime.now());
             commentDO.setUpdatedAt(LocalDateTime.now());
             commentMapper.insert(commentDO);
+            
+            // 记录用户活动
+            eventPublisher.publishEvent(new UserActivityEvent(
+                    this,
+                    commentDTO.getUserId(),
+                    ActivityTypeEnum.COMMENT,
+                    commentDTO.getArticleId()
+            ));
             
             // Could update article comment count in article table for faster retrieval
             // articleMapper.incrementCommentCount(commentDTO.getArticleId());

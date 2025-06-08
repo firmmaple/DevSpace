@@ -19,7 +19,7 @@ public class ArticleSummaryVO { // For list view
     private Long authorId;
     private String authorUsername; // Populate this in the service layer
     private Integer status; // Article status: 1-published, 0-draft, 2-deleted
-    private Boolean isHot; // 是否为热门文章
+    private Boolean isRecommended; // 是否为推荐文章
     private LocalDateTime createdAt;
     // Add interaction counts later
     @JsonSerialize(using = ToStringSerializer.class)

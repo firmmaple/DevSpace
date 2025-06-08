@@ -349,7 +349,7 @@ public class UserUpdateDTO implements Serializable {
         - Request Body: `multipart/form-data` with field `avatar` (File)
         - Response: `ResVo<String>` (返回新的头像 URL)
         - **Side Effect**: 更新用户数据库中的 `avatarUrl`。
-    - `GET /api/users/popular`: 获取热门作者列表
+    - `GET /api/users/popular`: 获取热门作者列表（基于发文数量等数据）
         - Parameters: `limit` (int, optional, default: 5) - 获取作者数量
         - Response: `ResVo<List<UserVO>>` (UserVO 中可能包含 articleCount)
 ## 3.3 文章接口 (`/api/articles`)
@@ -467,7 +467,7 @@ public class UserUpdateDTO implements Serializable {
             - `articleId` (Long): 文章ID
             - `days` (int, optional): 查询天数 (e.g., 7, 30, 90)，默认为null或服务层默认值
         - Response: `ResVo<ArticleStatsVO>` (包含总数和每日统计数据)
-    - `GET /api/stats/trending`: 获取热门文章列表 (基于统计数据)
+    - `GET /api/stats/trending`: 获取热门文章列表（基于浏览量、点赞等统计数据）
         - Parameters:
             - `days` (int, optional): 统计天数
             - `limit` (int, optional): 返回数量
@@ -497,10 +497,6 @@ public class UserUpdateDTO implements Serializable {
     - `content` (TEXT) - 文章内容
     - `author_id` (BIGINT, FK) - 作者ID，关联用户表
     - `status` (TINYINT) - 状态，1-已发布，0-草稿
-    - `view_count` (BIGINT, default: 0)
-    - `like_count` (BIGINT, default: 0)
-    - `collect_count` (BIGINT, default: 0)
-    - `comment_count` (BIGINT, default: 0)
     - `create_time` (DATETIME)
     - `update_time` (DATETIME)
     - `deleted` (BOOLEAN, default: false)
@@ -574,7 +570,7 @@ public class UserUpdateDTO implements Serializable {
 ### 后续计划
 
 -   引入布隆过滤器等机制防止恶意刷量。
--   实现热门文章排行功能。
+-   实现基于数据的热门文章排行功能。
 
 # 5. 用户资料管理设计
 
@@ -641,49 +637,51 @@ public class UserUpdateDTO implements Serializable {
     5. 返回更新后的 `UserVO`。
     *注意*: 前端 `AuthUtils.updateUserInfo()` 会根据返回的 `UserVO` 更新 `user_info` Cookie。
 
-# 6. 事件驱动系统 (交互功能)
+# 6. 文章交互系统 (基于RabbitMQ)
 
-## 6.1 变更概述
+## 6.1 系统概述
 
-DevSpace 项目添加了基于 Spring 事件和 RabbitMQ 消息队列的异步处理系统，以支持文章点赞、收藏和评论功能。该实现采用了事件驱动架构，将交互操作与业务逻辑解耦，提高系统响应速度和可扩展性。
+DevSpace 项目采用基于 RabbitMQ 消息队列的异步处理系统，支持文章点赞、收藏和评论功能。该实现采用了简化的消息驱动架构，将交互操作与业务逻辑解耦，提高系统响应速度和可维护性。
 
 ## 6.2 架构设计
 
-### 6.2.1 事件驱动流程
+### 6.2.1 消息驱动流程
 
 1. **交互触发**: 用户在前端进行点赞、收藏或评论操作。
 2. **API 调用**: 前端调用相应的 REST API (e.g., `/api/articles/{id}/like`, `/api/comments`)。
-3. **同步操作 & 事件发布**: Controller 调用 Service。Service 执行**必要的同步验证** (如检查用户权限)，然后发布相应的 Spring 事件 (e.g., `ArticleLikeEvent`, `ArticleCommentEvent`)。 **API 立即返回成功响应**给前端（乐观响应）。
-4. **事件监听 & 消息发送**: 事件监听器 (`ArticleInteractionListener`) 捕获 Spring 事件，将其转换为消息，并通过 `RabbitTemplate` 发送到 RabbitMQ 的指定队列。
-5. **消息消费 & 异步处理**: 消息消费者 (e.g., `ArticleLikeConsumer`, `CommentConsumer`) 监听队列，接收消息并执行**实际的数据库操作**（如更新点赞/收藏/评论表，更新文章统计计数）。
-6. **结果最终一致**: 数据库状态最终会与用户的操作一致。前端通过后续加载数据或 WebSocket (可选) 获取最新状态。
+3. **同步验证 & 消息发送**: Controller 调用 Service。Service 执行**必要的同步验证** (如检查用户权限)，然后直接发送 RabbitMQ 消息到指定队列。**API 立即返回成功响应**给前端（乐观响应）。
+4. **消息消费 & 异步处理**: 消息消费者 (`ArticleInteractionConsumer`) 监听队列，接收消息并执行**实际的数据库操作**（如更新点赞/收藏/评论表）。
+5. **用户活动记录**: 消息消费者在处理完数据库操作后，发布 `UserActivityEvent` 记录用户活动。
+6. **结果最终一致**: 数据库状态最终会与用户的操作一致。前端通过后续加载数据获取最新状态。
 
 ### 6.2.2 主要组件
 
-- **Spring 事件**: 用于应用内事件通知 (`ArticleInteractionEvent` 及其子类)。
+- **MQPublisher**: 消息发布器，用于发送消息到 RabbitMQ。
 - **RabbitMQ**: 实现可靠的异步消息处理 (交换机 `interaction.exchange`, 队列 `article.like.queue`, `article.collect.queue`, `article.comment.queue`)。
-- **事件监听器 (`ArticleInteractionListener`)**: 将 Spring 事件转发到 MQ。
-- **消息消费者 (e.g., `ArticleLikeConsumer`)**: 异步处理数据库逻辑。
+- **ArticleInteractionConsumer**: 统一的消息消费者，处理所有交互相关的数据库操作。
+- **UserActivityEventListener**: 处理用户活动记录的事件监听器。
 
 ## 6.3 实现细节
 
-### 6.3.1 Spring 事件
+### 6.3.1 消息DTO
 
-- `ArticleInteractionEvent`: 交互事件基类 (含 `articleId`, `userId`)。
-- `ArticleLikeEvent`: 点赞/取消事件 (含 `isLike` 标志)。
-- `ArticleCollectEvent`: 收藏/取消事件 (含 `isCollect` 标志)。
-- `ArticleCommentEvent`: 发表评论事件 (含 `content`, `parentId`)。
+- `LikeDTO`: 点赞/取消消息 (含 `articleId`, `userId`, `isAdd` 标志)。
+- `CollectDTO`: 收藏/取消消息 (含 `articleId`, `userId`, `isAdd` 标志)。
+- `CommentDTO`: 发表评论消息 (含 `articleId`, `userId`, `content`, `parentId`)。
 
 ### 6.3.2 消息队列配置
 
-配置了 RabbitMQ 相关的交换机 (`interaction.exchange` - topic)、队列和绑定。
+配置了 RabbitMQ 相关的交换机 (`interaction.exchange` - topic)、队列和绑定：
+- `article.like.queue`: 处理点赞/取消点赞消息
+- `article.collect.queue`: 处理收藏/取消收藏消息  
+- `article.comment.queue`: 处理评论消息
 
 ### 6.3.3 数据库设计
 
 - `t_article_like`: 存储用户点赞记录。
 - `t_article_collect`: 存储用户收藏记录。
 - `t_comment`: 存储用户评论，支持嵌套回复 (通过 `parent_id`)。
-- `t_article`: 包含 `like_count`, `collect_count`, `comment_count` 统计字段，由消息消费者更新。
+- `user_activity`: 存储用户活动记录。
 
 ### 6.3.4 API 设计
 
@@ -695,9 +693,26 @@ DevSpace 项目添加了基于 Spring 事件和 RabbitMQ 消息队列的异步�
 
 1. **即时反馈**：用户执行操作（点赞、评论等）后，UI 立即更新（如点赞按钮状态切换、评论直接显示），无需等待服务器确认。
 2. **API 调用**: 同时，前端调用相应的 API 将操作发送到后端。
-3. **后台同步**：后端 API 接收请求，发布事件，并立即返回成功。
+3. **后台同步**：后端 API 接收请求，发送 RabbitMQ 消息，并立即返回成功。
 4. **错误处理**：如果 API 调用失败（网络错误或同步验证失败），前端需要撤销 UI 更改并显示错误信息。
-5. **最终一致性**: 异步处理完成后，数据库状态会更新。下次加载页面或通过其他机制（如 WebSocket）刷新数据时，会显示最终的、准确的状态。
+5. **最终一致性**: 异步处理完成后，数据库状态会更新。下次加载页面时，会显示最终的、准确的状态。
+
+## 6.5 技术优势
+
+### 6.5.1 架构简化
+- **单一消息机制**：只使用 RabbitMQ，避免了 Spring 事件到消息队列的转换层
+- **调试友好**：消息流向更直接，问题定位更容易
+- **代码简洁**：删除了冗余的事件转换代码
+
+### 6.5.2 性能提升
+- **减少序列化开销**：消除了 Spring 事件到 RabbitMQ 消息的转换
+- **降低内存使用**：减少了中间对象的创建
+- **提高响应速度**：减少了一层异步处理
+
+### 6.5.3 可靠性保持
+- **消息持久化**：RabbitMQ 确保消息不丢失
+- **失败重试**：保持原有的消息重试机制
+- **事务一致性**：通过消息队列保证最终一致性
 
 # 7. 大整数ID处理规范
 
@@ -1014,7 +1029,7 @@ DevSpace 实现了一个活动跟踪和文章统计系统，用于记录用户�
 - **定时任务**: 可能存在 `@Scheduled` 任务用于汇总 `article_daily_stats` 数据。
 - **API**: 
     - `UserActivityRestController`: 提供 `/api/activities/**` 端点获取活动记录。
-    - `ArticleStatsRestController`: 提供 `/api/stats/article/{id}` 获取单篇统计，`/api/stats/trending` 获取热门文章。
+    - `ArticleStatsRestController`: 提供 `/api/stats/article/{id}` 获取单篇统计，`/api/stats/trending` 获取基于数据的热门文章。
 
 ### 11.3.2 前端 (`ui/static/js/profile-stats.js`)
 

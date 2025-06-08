@@ -4,11 +4,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.jeffrey.api.dto.interaction.CommentDTO;
-import org.jeffrey.api.enums.ActivityTypeEnum;
 import org.jeffrey.api.exception.ResourceNotFoundException;
 import org.jeffrey.api.vo.comment.CommentVO;
-import org.jeffrey.core.event.ArticleCommentEvent;
-import org.jeffrey.core.event.UserActivityEvent;
+import org.jeffrey.core.mq.MQPublisher;
+import org.jeffrey.core.mq.RabbitMQConfig;
 import org.jeffrey.core.trace.TraceLog;
 import org.jeffrey.service.article.repository.entity.ArticleDO;
 import org.jeffrey.service.article.repository.entity.CommentDO;
@@ -17,7 +16,6 @@ import org.jeffrey.service.article.repository.mapper.CommentMapper;
 import org.jeffrey.service.article.service.CommentService;
 import org.jeffrey.service.user.repository.entity.UserDO;
 import org.jeffrey.service.user.service.UserService;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -32,7 +30,7 @@ public class CommentServiceImpl implements CommentService {
     private final CommentMapper commentMapper;
     private final ArticleMapper articleMapper;
     private final UserService userService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final MQPublisher mqPublisher;
 
     @Override
     @TraceLog("添加评论")
@@ -51,22 +49,18 @@ public class CommentServiceImpl implements CommentService {
             }
         }
 
-        // Publish event to handle comment asynchronously
-        eventPublisher.publishEvent(new ArticleCommentEvent(
-                this,
+        // 直接发送RabbitMQ消息处理评论
+        org.jeffrey.api.dto.interaction.CommentDTO mqCommentDTO = new org.jeffrey.api.dto.interaction.CommentDTO(
                 commentDTO.getArticleId(),
                 commentDTO.getUserId(),
                 commentDTO.getContent(),
                 commentDTO.getParentId()
-        ));
-
-        eventPublisher.publishEvent(new UserActivityEvent(
-                this,
-                commentDTO.getUserId(),
-                ActivityTypeEnum.COMMENT,
-                commentDTO.getArticleId(),
-                null
-        ));
+        );
+        mqPublisher.sendMessage(
+                RabbitMQConfig.INTERACTION_EXCHANGE,
+                RabbitMQConfig.COMMENT_ROUTING_KEY,
+                mqCommentDTO
+        );
 
         // Create a response VO (without DB ID since processing is async)
         CommentVO commentVO = new CommentVO();

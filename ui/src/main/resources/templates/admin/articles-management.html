@@ -44,7 +44,7 @@
                                 <th scope="col">标题</th>
                                 <th scope="col">作者</th>
                                 <th scope="col">状态</th>
-                                <th scope="col">热门</th>
+                                <th scope="col">推荐</th>
                                 <th scope="col">创建日期</th>
                                 <th scope="col">操作</th>
                             </tr>
@@ -62,12 +62,12 @@
                                     <span th:if="${article.status == 2}" class="badge bg-danger">已删除</span>
                                 </td>
                                 <td>
-                                    <button type="button" class="btn btn-sm toggle-hot-btn"
-                                            th:classappend="${article.isHot} ? 'btn-danger' : 'btn-secondary'"
+                                    <button type="button" class="btn btn-sm toggle-recommended-btn"
+                                            th:classappend="${article.isRecommended} ? 'btn-danger' : 'btn-secondary'"
                                             th:data-articleid="${article.id}" 
                                             th:data-title="${article.title}"
-                                            th:data-ishot="${article.isHot}">
-                                        <span th:text="${article.isHot} ? '热门' : '普通'">普通</span>
+                                            th:data-isrecommended="${article.isRecommended}">
+                                        <span th:text="${article.isRecommended} ? '推荐' : '普通'">普通</span>
                                     </button>
                                 </td>
                                 <td th:text="${#temporals.format(article.createdAt, 'yyyy-MM-dd HH:mm')}">2023-10-01</td>
@@ -123,40 +123,40 @@
                     });
                 });
                 
-                // 为所有切换热门状态按钮添加点击事件
-                document.querySelectorAll('.toggle-hot-btn').forEach(button => {
+                // 为所有切换推荐状态按钮添加点击事件
+                document.querySelectorAll('.toggle-recommended-btn').forEach(button => {
                     button.addEventListener('click', function() {
                         const articleId = this.getAttribute('data-articleid');
                         const title = this.getAttribute('data-title');
-                        const isHot = this.getAttribute('data-ishot') === 'true';
-                        const newHotStatus = !isHot;
-                        const actionText = newHotStatus ? '设为热门文章' : '取消热门文章';
+                        const isRecommended = this.getAttribute('data-isrecommended') === 'true';
+                        const newRecommendedStatus = !isRecommended;
+                        const actionText = newRecommendedStatus ? '设为推荐文章' : '取消推荐文章';
                         
                         if (confirm(`确定要将文章 "${title}" (ID: ${articleId}) ${actionText}吗？`)) {
-                            // 发送切换热门状态请求
-                            AuthUtils.authenticatedFetch(`/api/admin/articles/${articleId}/hot?isHot=${newHotStatus}`, {
+                            // 发送切换推荐状态请求
+                            AuthUtils.authenticatedFetch(`/api/admin/articles/${articleId}/recommended?isRecommended=${newRecommendedStatus}`, {
                                 method: 'PUT'
                             })
                             .then(response => {
                                 if (response.status.code === 0) {
-                                    alert(`文章热门状态更新成功！`);
+                                    alert(`文章推荐状态更新成功！`);
                                     // 更新按钮样式和文本
-                                    if (newHotStatus) {
+                                    if (newRecommendedStatus) {
                                         this.classList.remove('btn-secondary');
                                         this.classList.add('btn-danger');
-                                        this.querySelector('span').textContent = '热门';
+                                        this.querySelector('span').textContent = '推荐';
                                     } else {
                                         this.classList.remove('btn-danger');
                                         this.classList.add('btn-secondary');
                                         this.querySelector('span').textContent = '普通';
                                     }
-                                    this.setAttribute('data-ishot', newHotStatus);
+                                    this.setAttribute('data-isrecommended', newRecommendedStatus);
                                 } else {
-                                    alert('更新热门状态失败: ' + response.status.msg);
+                                    alert('更新推荐状态失败: ' + response.status.msg);
                                 }
                             })
                             .catch(error => {
-                                alert('更新热门状态请求失败: ' + error.message);
+                                alert('更新推荐状态请求失败: ' + error.message);
                             });
                         }
                     });
